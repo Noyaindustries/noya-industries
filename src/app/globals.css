@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+:root {
+  --bg-deep: #080706;
+  --bg-elevated: #12100e;
+  --bg-card: rgba(255, 248, 237, 0.03);
+  --text-primary: #f7f2ea;
+  --text-muted: rgba(247, 242, 234, 0.62);
+  --text-faint: rgba(247, 242, 234, 0.38);
+  --line: rgba(255, 248, 237, 0.08);
+  --gold: #d4af37;
+  --gold-soft: #e8d9a8;
+  --forest: #1e4d3a;
+  --forest-glow: rgba(30, 77, 58, 0.45);
+  --accent-warm: #c17f4a;
+}
+
+@theme inline {
+  --color-noya-bg: var(--bg-deep);
+  --color-noya-surface: var(--bg-elevated);
+  --color-noya-card: var(--bg-card);
+  --color-noya-text: var(--text-primary);
+  --color-noya-muted: var(--text-muted);
+  --color-noya-faint: var(--text-faint);
+  --color-noya-line: var(--line);
+  --color-noya-gold: var(--gold);
+  --color-noya-gold-soft: var(--gold-soft);
+  --color-noya-forest: var(--forest);
+  --font-sans: var(--font-bricolage);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-dm-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+}
+
+::selection {
+  background: rgba(212, 175, 55, 0.35);
+  color: var(--text-primary);
+}
+
+.mesh-bg {
+  background:
+    radial-gradient(ellipse 120% 80% at 10% -20%, var(--forest-glow), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 90% 10%, rgba(193, 127, 74, 0.12), transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(212, 175, 55, 0.06), transparent 45%),
+    var(--bg-deep);
+}
+
+.glass-nav {
+  background: rgba(8, 7, 6, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+
+.card-premium {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 248, 237, 0.05) 0%,
+    rgba(255, 248, 237, 0.02) 100%
+  );
+  border: 1px solid var(--line);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset,
+    0 24px 48px -24px rgba(0, 0, 0, 0.6);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(120deg, var(--gold-soft) 0%, var(--gold) 45%, #f0e6c8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float-soft {
+  animation: float-soft 8s ease-in-out infinite;
+}
+
+@keyframes shimmer-line {
+  0% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+
+.hero-line {
+  animation: shimmer-line 4s ease-in-out infinite;
+}
