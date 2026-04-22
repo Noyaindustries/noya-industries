@@ -31,7 +31,7 @@ export function NoyaLandingBlog() {
           </div>
           <div className="blog-row2 rv">
             <div className="article-mini">
-              <div className="article-cat ac-purple" style={{fontSize: '9.5px'}}>Venture</div>
+              <div className="article-cat ac-purple" style={{fontSize: '9.5px'}}>Startup Studio</div>
               <div style={{fontFamily: '"Fraunces",serif', fontSize: 15, fontWeight: 600, letterSpacing: '-.02em', lineHeight: '1.35'}}>Créer une startup en Côte d'Ivoire en 2026 : le guide OHADA</div>
               <div style={{fontFamily: '"DM Mono",monospace', fontSize: '10.5px', color: 'var(--fog)'}}>Déc. 2025</div>
             </div>

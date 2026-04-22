@@ -39,7 +39,7 @@ export function NoyaLandingHero() {
             <div className="ticker-item"><div className="ti-dot" />PRESENZ</div>
             <div className="ticker-item"><div className="ti-dot" />Infinite Core SaaS</div>
             <div className="ticker-item"><div className="ti-dot" />Academy</div>
-            <div className="ticker-item"><div className="ti-dot" />Venture Building</div>
+            <div className="ticker-item"><div className="ti-dot" />Startup Studio</div>
             <div className="ticker-item"><div className="ti-dot" />Abidjan · Côte d'Ivoire</div>
             {/* duplicate */}
             <div className="ticker-item"><div className="ti-dot" />Consulting Stratégique</div>
@@ -50,7 +50,7 @@ export function NoyaLandingHero() {
             <div className="ticker-item"><div className="ti-dot" />PRESENZ</div>
             <div className="ticker-item"><div className="ti-dot" />Infinite Core SaaS</div>
             <div className="ticker-item"><div className="ti-dot" />Academy</div>
-            <div className="ticker-item"><div className="ti-dot" />Venture Building</div>
+            <div className="ticker-item"><div className="ti-dot" />Startup Studio</div>
             <div className="ticker-item"><div className="ti-dot" />Abidjan · Côte d'Ivoire</div>
           </div>
         </div>

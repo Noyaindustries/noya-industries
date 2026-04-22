@@ -1,30 +1,185 @@
+type TeamMember = {
+  initials: string;
+  name: string;
+  role: string;
+  roleClass: string;
+  desc: string;
+  skills: string[];
+  photo: string;
+  socials: {
+    label: string;
+    href: string;
+    kind: "linkedin" | "facebook" | "instagram" | "tiktok" | "x";
+  }[];
+};
+
+const TEAM_MEMBERS: TeamMember[] = [
+  {
+    initials: "YA",
+    name: "N'guessan Opely Yannick Abraham",
+    role: "Fondateur & Directeur Général",
+    roleClass: "team-role-gold",
+    desc: "Stratégie, développement commercial et pilotage global du groupe Noya Industries.",
+    skills: ["Stratégie", "Développement commercial", "Pilotage global"],
+    photo: "/landing/team/opely.png",
+    socials: [
+      { label: "LinkedIn", href: "#", kind: "linkedin" },
+      { label: "Facebook", href: "#", kind: "facebook" },
+      { label: "Instagram", href: "#", kind: "instagram" },
+    ],
+  },
+  {
+    initials: "JY",
+    name: "Jahmmy Yapo Ahue",
+    role: "Responsable Pôle Technologique",
+    roleClass: "team-role-blue",
+    desc: "Supervision des projets tech, coordination des équipes de développement et garantie qualité des livrables.",
+    skills: ["Supervision tech", "Coordination équipes", "Qualité livrables"],
+    photo: "/landing/team/jahmmy.jpg",
+    socials: [
+      { label: "LinkedIn", href: "#", kind: "linkedin" },
+      { label: "Instagram", href: "#", kind: "instagram" },
+      { label: "X", href: "#", kind: "x" },
+    ],
+  },
+  {
+    initials: "KS",
+    name: "Kouassi Stéphane",
+    role: "Responsable Technique Logiciels",
+    roleClass: "team-role-green",
+    desc: "Développement et maintenance des solutions logicielles.",
+    skills: ["Développement logiciel", "Maintenance", "Fiabilité"],
+    photo: "/landing/team/stephane.png",
+    socials: [
+      { label: "LinkedIn", href: "#", kind: "linkedin" },
+      { label: "TikTok", href: "#", kind: "tiktok" },
+      { label: "Facebook", href: "#", kind: "facebook" },
+    ],
+  },
+  {
+    initials: "JK",
+    name: "Jean-Loïc Koné",
+    role: "Développeur Fullstack & Designer",
+    roleClass: "team-role-blue",
+    desc: "Développement des interfaces, conception graphique et livraison des projets web du groupe.",
+    skills: ["Fullstack", "Design UI", "Livraison web"],
+    photo: "/landing/team/jean-loic.jpg",
+    socials: [
+      { label: "LinkedIn", href: "#", kind: "linkedin" },
+      { label: "Instagram", href: "#", kind: "instagram" },
+      { label: "Facebook", href: "#", kind: "facebook" },
+    ],
+  },
+  {
+    initials: "JB",
+    name: "Jean Bilboa",
+    role: "Consultant Technologique",
+    roleClass: "team-role-gold",
+    desc: "Conseil en architecture système, évaluation des solutions tech et structuration des roadmaps produit.",
+    skills: ["Architecture système", "Évaluation tech", "Roadmap produit"],
+    photo: "/landing/team/bilboa.jpg",
+    socials: [
+      { label: "LinkedIn", href: "#", kind: "linkedin" },
+      { label: "X", href: "#", kind: "x" },
+      { label: "Facebook", href: "#", kind: "facebook" },
+    ],
+  },
+  {
+    initials: "SE",
+    name: "Sah Hugue Edgar",
+    role: "Business Developer",
+    roleClass: "team-role-green",
+    desc: "Prospection, développement des partenariats et pilotage des cycles de vente PADDE-CI, Infinite Core et PRESENZ.",
+    skills: ["Prospection", "Partenariats", "Cycles de vente"],
+    photo: "/landing/team/edgar.jpg",
+    socials: [
+      { label: "LinkedIn", href: "#", kind: "linkedin" },
+      { label: "Instagram", href: "#", kind: "instagram" },
+      { label: "TikTok", href: "#", kind: "tiktok" },
+    ],
+  },
+  {
+    initials: "MI",
+    name: "Mbaka Laeticia Imagna",
+    role: "Assistante Polyvalente",
+    roleClass: "team-role-blue",
+    desc: "Gestion de la boutique African Concept Store, phoning et prospection PADDE-CI, animation des réseaux sociaux.",
+    skills: ["Concept Store", "Phoning & prospection", "Réseaux sociaux"],
+    photo: "/landing/team/laeticia.jpg",
+    socials: [
+      { label: "Facebook", href: "#", kind: "facebook" },
+      { label: "Instagram", href: "#", kind: "instagram" },
+      { label: "TikTok", href: "#", kind: "tiktok" },
+    ],
+  },
+];
+
 export function NoyaLandingTeam() {
+  const loopedMembers = [...TEAM_MEMBERS, ...TEAM_MEMBERS];
+  const baseCount = TEAM_MEMBERS.length;
+
   return (
     <>
       <section className="sec" id="team">
         <p className="eyebrow rv">L'équipe</p>
         <h2 className="display rv d1">Les personnes qui<br /><em>construisent le groupe.</em></h2>
-        <div className="team-grid">
-          <div className="team-card rv">
-            <div className="team-av" style={{background: 'linear-gradient(135deg,var(--gold),var(--cobalt))'}}>YN</div>
-            <div className="team-name">Yannick N'guessan</div>
-            <div className="team-role" style={{color: 'var(--gold)'}}>Fondateur &amp; DG</div>
-            <div className="team-desc">Entrepreneur et stratège digital. Fondateur de Noya Industries en 2021, il pilote la vision du groupe, les partenariats stratégiques et le développement de chaque nouveau pôle et produit.</div>
-            <div className="team-skills"><span className="ts">Stratégie</span><span className="ts">Venture</span><span className="ts">Product</span><span className="ts">Business Dev</span></div>
-          </div>
-          <div className="team-card rv d1">
-            <div className="team-av" style={{background: 'linear-gradient(135deg,var(--cobalt),#7C3AED)'}}>JL</div>
-            <div className="team-name">Jean-Loïc Koné</div>
-            <div className="team-role" style={{color: 'var(--cobalt3)'}}>Directeur Créatif</div>
-            <div className="team-desc">Directeur artistique du groupe. Il est responsable de l'identité visuelle de Noya Industries et de l'ensemble des marques du portefeuille — de la charte graphique aux livrables clients finaux.</div>
-            <div className="team-skills"><span className="ts">UI/UX</span><span className="ts">Branding</span><span className="ts">Motion</span><span className="ts">Figma</span></div>
-          </div>
-          <div className="team-card rv d2">
-            <div className="team-av" style={{background: 'linear-gradient(135deg,#10B981,var(--cobalt))'}}>KS</div>
-            <div className="team-name">Kouassi Stéphane</div>
-            <div className="team-role" style={{color: '#34D399'}}>Ingénieur Fullstack</div>
-            <div className="team-desc">Ingénieur logiciel fullstack, partenaire technique de Noya Industries. Il développe et déploie les plateformes PRESENZ, Infinite Core et les solutions digitales sur mesure pour les clients du groupe.</div>
-            <div className="team-skills"><span className="ts">Next.js</span><span className="ts">Node.js</span><span className="ts">PostgreSQL</span><span className="ts">Strapi</span></div>
+        <div className="team-marquee">
+          <div className="team-track">
+            {loopedMembers.map((member, idx) => {
+              const isClone = idx >= baseCount;
+              return (
+            <article
+              key={`${member.name}-${idx}`}
+              className={`team-card rv${idx % baseCount === 1 ? " d1" : ""}${idx % baseCount === 2 ? " d2" : ""}${isClone ? " team-card-clone" : ""}`}
+            >
+              <img
+                className="team-photo"
+                src={member.photo}
+                alt={`Portrait de ${member.name}`}
+                loading="lazy"
+              />
+              <div className="team-photo-shade" />
+              <div className="team-bottom">
+                <div className="team-head-row">
+                  <div>
+                    <div className="team-name">{member.name}</div>
+                    <div className={`team-role ${member.roleClass}`}>{member.role}</div>
+                  </div>
+                  <div className="team-socials" aria-label={`Réseaux sociaux de ${member.name}`}>
+                    {member.socials.map((social) => (
+                      <a
+                        key={`${member.initials}-${social.kind}`}
+                        href={social.href}
+                        className={`team-social ts-${social.kind}`}
+                        title={social.label}
+                        aria-label={social.label}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        tabIndex={isClone ? -1 : undefined}
+                      >
+                        {social.kind === "linkedin" ? "in" : null}
+                        {social.kind === "facebook" ? "f" : null}
+                        {social.kind === "instagram" ? "◉" : null}
+                        {social.kind === "tiktok" ? "♪" : null}
+                        {social.kind === "x" ? "𝕏" : null}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                <div className="team-skills">
+                  {member.skills.map((skill) => (
+                    <span key={`${member.initials}-${skill}`} className="ts">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="team-hover-panel">
+                <p className="team-desc">{member.desc}</p>
+              </div>
+            </article>
+              );
+            })}
           </div>
         </div>
       </section>

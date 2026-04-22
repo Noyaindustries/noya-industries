@@ -349,7 +349,7 @@ export function OverviewPage({
                   className="dl-dot"
                   style={{ background: "var(--purple)" }}
                 />
-                Venture <div className="dl-pct">9%</div>
+                Startup Studio <div className="dl-pct">9%</div>
               </div>
             </div>
           </div>
@@ -376,7 +376,7 @@ export function OverviewPage({
               <div className="mini-val" style={{ color: "#A78BFA" }}>
                 0.9M
               </div>
-              <div className="mini-lbl">Venture</div>
+              <div className="mini-lbl">Startup Studio</div>
             </div>
           </div>
         </div>

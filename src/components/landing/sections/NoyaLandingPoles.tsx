@@ -2,7 +2,7 @@ const POLE_JUMP = [
   { href: "#pole-consulting", label: "Consulting", cls: "pj-c" },
   { href: "#pole-tech", label: "Tech & SaaS", cls: "pj-t" },
   { href: "#pole-academy", label: "Academy", cls: "pj-a" },
-  { href: "#pole-ventures", label: "Ventures", cls: "pj-v" },
+  { href: "#pole-ventures", label: "Startup Studio", cls: "pj-v" },
 ] as const;
 
 export function NoyaLandingPoles() {
@@ -116,18 +116,18 @@ export function NoyaLandingPoles() {
             <div className="pole pole-v rs rv d3" id="pole-ventures">
               <div className="pole-top">
                 <div className="pole-icon">🚀</div>
-                <div className="pole-badge pb-purple">Venture Building</div>
+                <div className="pole-badge pb-purple">Startup Studio</div>
               </div>
-              <div className="pole-name">Venture Building</div>
+              <div className="pole-name">Startup Studio</div>
               <div className="pole-sub">Co-fonder les entreprises africaines de demain</div>
-              <div className="pole-desc">Noya Ventures identifie, structure et accélère des opportunités de marché à fort potentiel en Afrique francophone. Infrastructure juridique et technologique partagée, réseau stratégique et capital opérationnel pour aller de la phase 0 au premier lancement.</div>
+              <div className="pole-desc">Le Startup Studio de Noya identifie, structure et accélère des opportunités de marché à fort potentiel en Afrique francophone. Infrastructure juridique et technologique partagée, réseau stratégique et capital opérationnel pour aller de la phase 0 au premier lancement.</div>
               <ul className="pole-list">
                 <li>Validation et étude de marché Africa First</li>
                 <li>Co-fondation et structuration juridique OHADA</li>
                 <li>Infrastructure tech &amp; légale partagée du groupe</li>
                 <li>Accès au réseau Noya et partenaires stratégiques</li>
                 <li>Accompagnement de la phase 0 au lancement</li>
-                <li>En cours : NYImmobilier — marché foncier CI</li>
+                <li>Poids Baoule, African concept store, NYimmobilier, Noya Tv, Infinite core, Padde Ci…</li>
               </ul>
               <a href="/contact" className="pole-link">Discuter d'un projet <svg width={13} height={13} fill="none" viewBox="0 0 13 13"><path d="M3 6.5h7M7 3.5 10 6.5 7 9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg></a>
             </div>

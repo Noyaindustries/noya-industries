@@ -150,7 +150,7 @@ export function NoyaLandingContactForm() {
             <option>Programme de formation</option>
             <option>Coaching dirigeant</option>
           </optgroup>
-          <optgroup label="Venture Building">
+          <optgroup label="Startup Studio">
             <option>Co-fondation de projet</option>
             <option>Partenariat stratégique</option>
           </optgroup>

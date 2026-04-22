@@ -44,7 +44,7 @@ export function NoyaLandingStory() {
                   <div className="era-tag et-blue">Leap technologique</div>
                   <div className="era-title">Infinite Core — The Operating System for African Business</div>
                   <div className="era-body">Noya Industries franchit une étape décisive. <strong>Infinite Core</strong> est la synthèse de 5 ans d'observation terrain : une suite SaaS modulaire tout-en-un qui réunit CRM, Finance, RH, Projets, Academy, Comms et Store dans un système unique — conçu pour les PME africaines, déployé en 5 jours, sans compromis.</div>
-                  <div className="era-tags"><span className="etag">Infinite Core SaaS</span><span className="etag">7 modules</span><span className="etag">Infinite System Enterprise</span><span className="etag">Academy</span><span className="etag">Ventures</span></div>
+                  <div className="era-tags"><span className="etag">Infinite Core SaaS</span><span className="etag">7 modules</span><span className="etag">Infinite System Enterprise</span><span className="etag">Academy</span><span className="etag">Startup Studio</span></div>
                 </div>
               </div>
             </div>
