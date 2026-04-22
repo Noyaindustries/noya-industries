@@ -5,6 +5,7 @@ import { NoyaLandingContact } from "@/components/landing/sections/NoyaLandingCon
 export default function ContactPage() {
   return (
     <NoyaLandingPageChrome>
+      <NoyaLandingContact />
       <NoyaLandingPageIntro
         eyebrow="Contact"
         title={
@@ -25,7 +26,6 @@ export default function ContactPage() {
         primaryAction={{ href: "#contact", label: "Envoyer un message" }}
         secondaryAction={{ href: "/poles", label: "Choisir un pôle" }}
       />
-      <NoyaLandingContact />
     </NoyaLandingPageChrome>
   );
 }

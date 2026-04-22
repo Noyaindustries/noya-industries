@@ -1,3 +1,7 @@
+"use client";
+
+import { useRef } from "react";
+
 type TeamMember = {
   initials: string;
   name: string;
@@ -115,22 +119,39 @@ const TEAM_MEMBERS: TeamMember[] = [
 ];
 
 export function NoyaLandingTeam() {
-  const loopedMembers = [...TEAM_MEMBERS, ...TEAM_MEMBERS];
-  const baseCount = TEAM_MEMBERS.length;
+  const marqueeRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollCards = (direction: "left" | "right") => {
+    const container = marqueeRef.current;
+    if (!container) return;
+
+    const amount = Math.max(260, Math.round(container.clientWidth * 0.72));
+    container.scrollBy({
+      left: direction === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
+  };
 
   return (
     <>
       <section className="sec" id="team">
         <p className="eyebrow rv">L'équipe</p>
         <h2 className="display rv d1">Les personnes qui<br /><em>construisent le groupe.</em></h2>
-        <div className="team-marquee">
+        <div className="team-controls rv d1">
+          <button type="button" className="team-scroll-btn" onClick={() => scrollCards("left")}>
+            ←
+          </button>
+          <button type="button" className="team-scroll-btn" onClick={() => scrollCards("right")}>
+            →
+          </button>
+        </div>
+        <div className="team-marquee" ref={marqueeRef}>
           <div className="team-track">
-            {loopedMembers.map((member, idx) => {
-              const isClone = idx >= baseCount;
+            {TEAM_MEMBERS.map((member, idx) => {
               return (
             <article
               key={`${member.name}-${idx}`}
-              className={`team-card rv${idx % baseCount === 1 ? " d1" : ""}${idx % baseCount === 2 ? " d2" : ""}${isClone ? " team-card-clone" : ""}`}
+              className={`team-card rv${idx === 1 ? " d1" : ""}${idx === 2 ? " d2" : ""}`}
             >
               <img
                 className="team-photo"
@@ -155,7 +176,6 @@ export function NoyaLandingTeam() {
                         aria-label={social.label}
                         target="_blank"
                         rel="noopener noreferrer"
-                        tabIndex={isClone ? -1 : undefined}
                       >
                         {social.kind === "linkedin" ? "in" : null}
                         {social.kind === "facebook" ? "f" : null}

@@ -1,17 +1,40 @@
-export function NoyaLandingContact() {
+type NoyaLandingContactProps = {
+  mode?: "contact" | "recruitment";
+};
+
+export function NoyaLandingContact({ mode = "contact" }: NoyaLandingContactProps) {
+  const isRecruitment = mode === "recruitment";
   return (
     <>
       <section className="sec-full contact-bg" id="contact">
         <div className="inner">
           <div className="contact-layout">
             <div>
-              <p className="eyebrow rv">Contact</p>
-              <h2 className="display rv d1">Parlons de<br />votre projet.</h2>
-              <p className="lead rv d2">Audit, site web, logiciel de gestion, formation ou startup studio — notre équipe analyse votre besoin et vous oriente vers la solution adaptée en moins de 24h.</p>
+              <p className="eyebrow rv">{isRecruitment ? "Recrutement" : "Contact"}</p>
+              <h2 className="display rv d1">
+                {isRecruitment ? (
+                  <>
+                    Candidatez pour
+                    <br />
+                    <em>rejoindre Noya</em>
+                  </>
+                ) : (
+                  <>
+                    Parlons de
+                    <br />
+                    votre projet.
+                  </>
+                )}
+              </h2>
+              <p className="lead rv d2">
+                {isRecruitment
+                  ? "Partagez votre profil, vos compétences et votre motivation. Notre équipe recrutement étudie chaque candidature et vous répond selon les opportunités ouvertes."
+                  : "Audit, site web, logiciel de gestion, formation ou startup studio — notre équipe analyse votre besoin et vous oriente vers la solution adaptée en moins de 24h."}
+              </p>
               <div className="contact-info-items">
                 <div className="ci rv d2"><div className="ci-icon">📍</div><div><div className="ci-label">Siège social</div><div className="ci-value">Abidjan, Riviera — Côte d'Ivoire</div></div></div>
-                <div className="ci rv d3"><div className="ci-icon">📞</div><div><div className="ci-label">Téléphone</div><div className="ci-value">+225 01 03 015 467</div></div></div>
-                <div className="ci rv d4"><div className="ci-icon">✉️</div><div><div className="ci-label">Email</div><div className="ci-value">contact@padde-ci.ci</div></div></div>
+                <div className="ci rv d3"><div className="ci-icon">📞</div><div><div className="ci-label">Téléphone</div><div className="ci-value">+225 01 03 015 467 / 05 76 66 60 79</div></div></div>
+                <div className="ci rv d4"><div className="ci-icon">✉️</div><div><div className="ci-label">Email</div><div className="ci-value">services@noyaindustries.com</div></div></div>
                 <div className="ci rv d5"><div className="ci-icon">💬</div><div><div className="ci-label">WhatsApp</div><div className="ci-value">Réponse garantie sous 24h ouvrables</div></div></div>
               </div>
               <div className="pole-shortcuts rv d3">
@@ -22,8 +45,13 @@ export function NoyaLandingContact() {
               </div>
             </div>
             <div className="contact-form rs rv d1">
-              <div className="form-title">Envoyer un message</div>
-              <div id="noya-landing-contact-root" />
+              <div className="form-title">
+                {isRecruitment ? "Déposer une candidature" : "Envoyer un message"}
+              </div>
+              <div
+                id="noya-landing-contact-root"
+                data-form-mode={isRecruitment ? "recruitment" : "contact"}
+              />
             </div>
           </div>
         </div>

@@ -31,7 +31,7 @@ export function NoyaLandingFooter() {
           <div className="ft-col"><h5>Pôles</h5><ul><li><a href="/poles">Consulting</a></li><li><a href="/poles">Tech &amp; SaaS</a></li><li><a href="/poles">Academy</a></li><li><a href="/poles">Startup Studio</a></li></ul></div>
           <div className="ft-col"><h5>Produits</h5><ul><li><a href="https://padde-ci.com/" target="_blank" rel="noopener noreferrer">PADDE-CI ↗</a></li><li><a href="https://www.infinitecore.net/" target="_blank" rel="noopener noreferrer">Infinite Core ↗</a></li><li><a href="/presenz">PRESENZ ↗</a></li><li><a href="#">NYImmobilier — Bientôt</a></li></ul></div>
           <div className="ft-col"><h5>Groupe</h5><ul><li><a href="/histoire">Notre histoire</a></li><li><a href="/equipe">L'équipe</a></li><li><a href="/expertise">Expertise</a></li><li><a href="/contact">Contact</a></li></ul></div>
-          <div className="ft-col"><h5>Contact</h5><ul><li><a href="tel:+2250103015467">+225 01 03 015 467</a></li><li><a href="mailto:contact@padde-ci.ci">contact@padde-ci.ci</a></li><li><a href="#">WhatsApp</a></li><li><a href="#">Abidjan, Riviera, CI</a></li></ul></div>
+          <div className="ft-col"><h5>Contact</h5><ul><li><a href="tel:+2250103015467">+225 01 03 015 467</a></li><li><a href="tel:+2250576666079">05 76 66 60 79</a></li><li><a href="mailto:services@noyaindustries.com">services@noyaindustries.com</a></li><li><a href="#">WhatsApp</a></li><li><a href="#">Abidjan, Riviera, CI</a></li></ul></div>
         </div>
         <div className="ft-bottom">
           <span className="ft-copy">© 2026 Noya Industries · Abidjan, Côte d'Ivoire · Tous droits réservés</span>

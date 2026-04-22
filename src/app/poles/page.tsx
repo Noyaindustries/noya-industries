@@ -5,6 +5,7 @@ import { NoyaLandingPoles } from "@/components/landing/sections/NoyaLandingPoles
 export default function PolesPage() {
   return (
     <NoyaLandingPageChrome>
+      <NoyaLandingPoles />
       <NoyaLandingPageIntro
         eyebrow="Pôles"
         title={
@@ -25,7 +26,6 @@ export default function PolesPage() {
         primaryAction={{ href: "/contact", label: "Discuter de votre besoin" }}
         secondaryAction={{ href: "/produits", label: "Voir nos produits" }}
       />
-      <NoyaLandingPoles />
     </NoyaLandingPageChrome>
   );
 }

@@ -129,7 +129,7 @@ export function NoyaLandingPoles() {
                 <li>Accompagnement de la phase 0 au lancement</li>
                 <li>Poids Baoule, African concept store, NYimmobilier, Noya Tv, Infinite core, Padde Ci…</li>
               </ul>
-              <a href="/contact" className="pole-link">Discuter d'un projet <svg width={13} height={13} fill="none" viewBox="0 0 13 13"><path d="M3 6.5h7M7 3.5 10 6.5 7 9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg></a>
+              <a href="/recrutement" className="pole-link">Rejoindre notre startup studio <svg width={13} height={13} fill="none" viewBox="0 0 13 13"><path d="M3 6.5h7M7 3.5 10 6.5 7 9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg></a>
             </div>
           </div>
         </div>

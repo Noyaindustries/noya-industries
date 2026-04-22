@@ -5,6 +5,7 @@ import { NoyaLandingBlog } from "@/components/landing/sections/NoyaLandingBlog";
 export default function ExpertisePage() {
   return (
     <NoyaLandingPageChrome>
+      <NoyaLandingBlog />
       <NoyaLandingPageIntro
         eyebrow="Expertise"
         title={
@@ -25,7 +26,6 @@ export default function ExpertisePage() {
         primaryAction={{ href: "/contact", label: "Demander un diagnostic" }}
         secondaryAction={{ href: "/histoire", label: "Voir notre parcours" }}
       />
-      <NoyaLandingBlog />
     </NoyaLandingPageChrome>
   );
 }

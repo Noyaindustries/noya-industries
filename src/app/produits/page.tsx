@@ -5,6 +5,7 @@ import { NoyaLandingProducts } from "@/components/landing/sections/NoyaLandingPr
 export default function ProduitsPage() {
   return (
     <NoyaLandingPageChrome>
+      <NoyaLandingProducts />
       <NoyaLandingPageIntro
         eyebrow="Produits"
         title={
@@ -25,7 +26,6 @@ export default function ProduitsPage() {
         primaryAction={{ href: "https://padde-ci.com/", label: "Explorer PADDE-CI" }}
         secondaryAction={{ href: "https://www.infinitecore.net/", label: "Explorer Infinite Core" }}
       />
-      <NoyaLandingProducts />
     </NoyaLandingPageChrome>
   );
 }

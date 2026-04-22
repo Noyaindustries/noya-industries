@@ -36,8 +36,12 @@ export function NoyaLandingClient() {
     let root: Root | null = null;
     const mountEl = document.getElementById("noya-landing-contact-root");
     if (mountEl) {
+      const mode =
+        mountEl.getAttribute("data-form-mode") === "recruitment"
+          ? "recruitment"
+          : "contact";
       root = createRoot(mountEl);
-      root.render(<NoyaLandingContactForm />);
+      root.render(<NoyaLandingContactForm mode={mode} />);
     }
 
     const cv = document.getElementById("world") as HTMLCanvasElement | null;

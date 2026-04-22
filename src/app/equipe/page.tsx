@@ -5,6 +5,7 @@ import { NoyaLandingTeam } from "@/components/landing/sections/NoyaLandingTeam";
 export default function EquipePage() {
   return (
     <NoyaLandingPageChrome>
+      <NoyaLandingTeam />
       <NoyaLandingPageIntro
         eyebrow="Équipe"
         title={
@@ -22,10 +23,9 @@ export default function EquipePage() {
           { value: "1", label: "vision partagée d’exécution" },
           { value: "360°", label: "couverture des besoins client" },
         ]}
-        primaryAction={{ href: "/contact", label: "Travailler avec nous" }}
+        primaryAction={{ href: "/recrutement", label: "Travailler avec nous" }}
         secondaryAction={{ href: "/poles", label: "Voir nos expertises" }}
       />
-      <NoyaLandingTeam />
     </NoyaLandingPageChrome>
   );
 }

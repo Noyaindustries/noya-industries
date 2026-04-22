@@ -12,7 +12,9 @@ export function NoyaLandingCtaFinal() {
           <div className="cta-info rv d4">
             <strong>+225 01 03 015 467</strong>
             <span style={{color: 'var(--fog)'}}>·</span>
-            <span>contact@padde-ci.ci</span>
+            <strong>05 76 66 60 79</strong>
+            <span style={{color: 'var(--fog)'}}>·</span>
+            <span>services@noyaindustries.com</span>
             <span style={{color: 'var(--fog)'}}>·</span>
             <span>Abidjan, Riviera, CI</span>
           </div>

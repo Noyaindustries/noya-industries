@@ -5,6 +5,7 @@ import { NoyaLandingStory } from "@/components/landing/sections/NoyaLandingStory
 export default function HistoirePage() {
   return (
     <NoyaLandingPageChrome>
+      <NoyaLandingStory />
       <NoyaLandingPageIntro
         eyebrow="Histoire"
         title={
@@ -25,7 +26,6 @@ export default function HistoirePage() {
         primaryAction={{ href: "/contact", label: "Parler avec l’équipe" }}
         secondaryAction={{ href: "/poles", label: "Découvrir nos pôles" }}
       />
-      <NoyaLandingStory />
     </NoyaLandingPageChrome>
   );
 }

@@ -17,7 +17,7 @@ export function NoyaLandingNav() {
             Mode
             <span className="nav-lux-value" data-lux-label>Showroom</span>
           </button>
-          <a href="/contact" className="nav-primary">
+          <a href="/recrutement" className="nav-primary">
             <span className="nav-primary-title">Travailler avec nous</span>
             <span className="nav-primary-meta">Recrutement</span>
             <span className="nav-primary-arrow" aria-hidden="true">
