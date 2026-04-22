@@ -2415,6 +2415,11 @@ footer::before{
   .stat{padding:34px 20px}
   .poles-hdr{margin-bottom:36px}
   .poles-grid{grid-template-columns:1fr}
+  .partners-strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .partner{padding:16px 10px}
+  .partner-icon{font-size:20px;margin-bottom:6px}
+  .partner-name{font-size:11.5px}
+  .partner-type{font-size:10px;line-height:1.35}
 
   .team-marquee{margin-top:38px}
   .team-track{gap:10px;animation-duration:54s}
@@ -2435,7 +2440,8 @@ footer::before{
   .proof-inner{padding:0 14px;gap:12px}
   .proof-label{white-space:normal}
   footer{padding:42px 14px 28px}
-  .ft-grid{grid-template-columns:1fr;gap:18px;margin-bottom:26px}
+  .ft-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 14px;margin-bottom:26px}
+  .ft-grid > :first-child{grid-column:1 / -1}
   .ft-col h5{margin-bottom:10px}
   .ft-col ul{gap:6px}
   .ft-brand p{max-width:none}
@@ -2454,9 +2460,15 @@ footer::before{
   .eyebrow{font-size:9.5px;letter-spacing:.11em}
   h2.display{font-size:clamp(26px,9.5vw,34px)}
   .lead{font-size:14px}
+  .partners-strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .partner{padding:14px 8px}
+  .partner-icon{font-size:18px}
+  .partner-name{font-size:10.8px}
+  .partner-type{font-size:9.6px;line-height:1.3}
   .team-card{flex-basis:min(90vw,300px);min-height:360px}
   .team-social{width:24px;height:24px;font-size:11px}
   footer{padding:36px 12px 24px}
+  .ft-grid{gap:16px 12px}
   .form-title{font-size:20px}
   .btn-submit{font-size:14px;padding:13px}
   .ft-col ul li a{font-size:12.5px}
