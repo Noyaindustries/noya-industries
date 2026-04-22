@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, DM_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
+import "./noya-artifact.css";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
   display: "swap",
-  axes: ["SOFT", "WONK", "opsz"],
 });
 
 const bricolage = Bricolage_Grotesque({
@@ -44,7 +44,9 @@ export default function RootLayout({
       lang="fr"
       className={`${fraunces.variable} ${bricolage.variable} ${dmMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full mesh-bg">{children}</body>
+      <body className="min-h-full" data-lux-preset="showroom">
+        {children}
+      </body>
     </html>
   );
 }
