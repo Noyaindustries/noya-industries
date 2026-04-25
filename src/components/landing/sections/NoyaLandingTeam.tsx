@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { LANDING_IMG } from "../landingAssets";
 
 type TeamMember = {
   initials: string;
@@ -25,7 +26,7 @@ const TEAM_MEMBERS: TeamMember[] = [
     roleClass: "team-role-gold",
     desc: "Stratégie, développement commercial et pilotage global du groupe Noya Industries.",
     skills: ["Stratégie", "Développement commercial", "Pilotage global"],
-    photo: "/landing/team/opely.png",
+    photo: LANDING_IMG.founderYannick,
     socials: [
       { label: "LinkedIn", href: "#", kind: "linkedin" },
       { label: "Facebook", href: "#", kind: "facebook" },
@@ -109,7 +110,7 @@ const TEAM_MEMBERS: TeamMember[] = [
     roleClass: "team-role-blue",
     desc: "Gestion de la boutique African Concept Store, phoning et prospection PADDE-CI, animation des réseaux sociaux.",
     skills: ["Concept Store", "Phoning & prospection", "Réseaux sociaux"],
-    photo: "/landing/team/laeticia.jpg",
+    photo: "/landing/team/laeticia.png",
     socials: [
       { label: "Facebook", href: "#", kind: "facebook" },
       { label: "Instagram", href: "#", kind: "instagram" },
@@ -193,9 +194,7 @@ export function NoyaLandingTeam() {
                     </span>
                   ))}
                 </div>
-              </div>
-              <div className="team-hover-panel">
-                <p className="team-desc">{member.desc}</p>
+                <p className="team-bio">{member.desc}</p>
               </div>
             </article>
               );

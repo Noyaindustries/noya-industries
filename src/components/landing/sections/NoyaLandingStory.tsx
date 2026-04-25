@@ -1,3 +1,5 @@
+import { LANDING_IMG } from "../landingAssets";
+
 export function NoyaLandingStory() {
   return (
     <>
@@ -10,8 +12,18 @@ export function NoyaLandingStory() {
               <p className="lead rv d2">De prestataire freelance à groupe structuré — Noya Industries a grandi mission après mission, avec la conviction que les entreprises africaines méritent des outils et un accompagnement à la hauteur de leurs ambitions.</p>
               <div className="story-founder rv d3">
                 <div className="sf-row">
-                  <div className="sf-av">YN</div>
-                  <div>
+                  <div className="sf-portrait-decor">
+                    <figure className="sf-portrait">
+                      <img
+                        src={LANDING_IMG.founderYannick}
+                        alt="Portrait de Yannick N'guessan, fondateur de Noya Industries"
+                        width={120}
+                        height={120}
+                        decoding="async"
+                      />
+                    </figure>
+                  </div>
+                  <div className="sf-meta">
                     <div className="sf-name">Yannick N'guessan</div>
                     <div className="sf-title">Fondateur &amp; Directeur Général</div>
                   </div>
