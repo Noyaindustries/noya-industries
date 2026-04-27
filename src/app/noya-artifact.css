@@ -1849,6 +1849,32 @@ h2.display em{
 }
 .team-card:nth-child(2) .team-photo{animation-delay:1.2s}
 .team-card:nth-child(3) .team-photo{animation-delay:2.4s}
+.team-photo.team-photo--avatar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  object-fit:unset;
+}
+.team-photo.team-photo--avatar.team-photo--avatar-gold{
+  background:linear-gradient(155deg,#4a3010 0%,#b86e0a 38%,#6b4a14 72%,#2d1f0a 100%);
+}
+.team-photo.team-photo--avatar.team-photo--avatar-blue{
+  background:linear-gradient(160deg,#1a3a6e 0%,#3d6eb8 45%,#0f2244 100%);
+}
+.team-photo.team-photo--avatar.team-photo--avatar-green{
+  background:linear-gradient(155deg,#0d3d32 0%,#1a6b5c 40%,#0a5c4a 100%);
+}
+.team-photo-initials{
+  font-family:var(--font-fraunces),Georgia,serif;
+  font-size:clamp(64px,22vmin,118px);
+  font-weight:700;
+  letter-spacing:-.04em;
+  line-height:1;
+  color:rgba(255,252,249,.94);
+  text-shadow:0 6px 28px rgba(0,0,0,.4);
+  user-select:none;
+  pointer-events:none;
+}
 .team-photo-shade{
   position:absolute;
   inset:0;

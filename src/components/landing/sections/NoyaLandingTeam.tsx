@@ -10,13 +10,20 @@ type TeamMember = {
   roleClass: string;
   desc: string;
   skills: string[];
-  photo: string;
+  /** `null` = avatar à initiales (pas de photo) */
+  photo: string | null;
   socials: {
     label: string;
     href: string;
     kind: "linkedin" | "facebook" | "instagram" | "tiktok" | "x";
   }[];
 };
+
+function avatarToneFromRole(roleClass: TeamMember["roleClass"]): "gold" | "blue" | "green" {
+  if (roleClass.includes("gold")) return "gold";
+  if (roleClass.includes("green")) return "green";
+  return "blue";
+}
 
 const TEAM_MEMBERS: TeamMember[] = [
   {
@@ -40,7 +47,7 @@ const TEAM_MEMBERS: TeamMember[] = [
     roleClass: "team-role-blue",
     desc: "Supervision des projets tech, coordination des équipes de développement et garantie qualité des livrables.",
     skills: ["Supervision tech", "Coordination équipes", "Qualité livrables"],
-    photo: "/landing/team/jahmmy.jpg",
+    photo: null,
     socials: [
       { label: "LinkedIn", href: "#", kind: "linkedin" },
       { label: "Instagram", href: "#", kind: "instagram" },
@@ -68,7 +75,7 @@ const TEAM_MEMBERS: TeamMember[] = [
     roleClass: "team-role-blue",
     desc: "Développement des interfaces, conception graphique et livraison des projets web du groupe.",
     skills: ["Fullstack", "Design UI", "Livraison web"],
-    photo: "/landing/team/jean-loic.jpg",
+    photo: null,
     socials: [
       { label: "LinkedIn", href: "#", kind: "linkedin" },
       { label: "Instagram", href: "#", kind: "instagram" },
@@ -82,7 +89,7 @@ const TEAM_MEMBERS: TeamMember[] = [
     roleClass: "team-role-gold",
     desc: "Conseil en architecture système, évaluation des solutions tech et structuration des roadmaps produit.",
     skills: ["Architecture système", "Évaluation tech", "Roadmap produit"],
-    photo: "/landing/team/bilboa.jpg",
+    photo: null,
     socials: [
       { label: "LinkedIn", href: "#", kind: "linkedin" },
       { label: "X", href: "#", kind: "x" },
@@ -96,7 +103,7 @@ const TEAM_MEMBERS: TeamMember[] = [
     roleClass: "team-role-green",
     desc: "Prospection, développement des partenariats et pilotage des cycles de vente PADDE-CI, Infinite Core et PRESENZ.",
     skills: ["Prospection", "Partenariats", "Cycles de vente"],
-    photo: "/landing/team/edgar.jpg",
+    photo: null,
     socials: [
       { label: "LinkedIn", href: "#", kind: "linkedin" },
       { label: "Instagram", href: "#", kind: "instagram" },
@@ -154,12 +161,24 @@ export function NoyaLandingTeam() {
               key={`${member.name}-${idx}`}
               className={`team-card rv${idx === 1 ? " d1" : ""}${idx === 2 ? " d2" : ""}`}
             >
-              <img
-                className="team-photo"
-                src={member.photo}
-                alt={`Portrait de ${member.name}`}
-                loading="lazy"
-              />
+              {member.photo ? (
+                <img
+                  className="team-photo"
+                  src={member.photo}
+                  alt={`Portrait de ${member.name}`}
+                  loading="lazy"
+                />
+              ) : (
+                <div
+                  className={`team-photo team-photo--avatar team-photo--avatar-${avatarToneFromRole(member.roleClass)}`}
+                  role="img"
+                  aria-label={`Avatar de ${member.name}`}
+                >
+                  <span className="team-photo-initials" aria-hidden="true">
+                    {member.initials}
+                  </span>
+                </div>
+              )}
               <div className="team-photo-shade" />
               <div className="team-bottom">
                 <div className="team-head-row">
