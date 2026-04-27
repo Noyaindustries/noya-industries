@@ -14,7 +14,6 @@ export function KpiCount({
   const [v, setV] = useState(0);
   useEffect(() => {
     if (!active) return;
-    setV(0);
     let start: number | null = null;
     const dur = 1600;
     const step = (ts: number) => {
@@ -38,7 +37,6 @@ export function KpiMillions({ active }: { active: boolean }) {
   const [v, setV] = useState(0);
   useEffect(() => {
     if (!active) return;
-    setV(0);
     let start: number | null = null;
     const dur = 1800;
     const step = (ts: number) => {

@@ -10,7 +10,8 @@
     "lint": "eslint",
     "postinstall": "npx prisma generate",
     "db:push": "npx prisma db push",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "npx tsx prisma/seed.ts",
+    "gen:favicon": "node scripts/gen-favicon.cjs"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -30,7 +31,9 @@
     "eslint-config-next": "16.2.3",
     "htmltojsx": "^0.3.0",
     "prisma": "^6.19.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
+    "to-ico": "^1.1.5",
     "tsx": "^4.20.0",
     "typescript": "^5"
   }

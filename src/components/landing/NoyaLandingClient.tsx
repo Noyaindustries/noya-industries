@@ -92,7 +92,7 @@ export function NoyaLandingClient() {
       }));
     }
 
-    let DOTS = seedDots();
+    const DOTS = seedDots();
 
     function resize() {
       if (!cv || !cx) return;
@@ -112,8 +112,12 @@ export function NoyaLandingClient() {
       }
     }
 
-    function paint() {
-      if (!running || !cx || !cv) return;
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function paintFrame() {
+      if (!cx || !cv) return;
       T++;
       cx.clearRect(0, 0, W, H);
 
@@ -149,45 +153,56 @@ export function NoyaLandingClient() {
         cx.stroke();
       });
 
-      DOTS.forEach((d) => {
-        d.x += d.vx;
-        d.y += d.vy;
-        if (d.x < 0 || d.x > W) d.vx *= -1;
-        if (d.y < 0 || d.y > H) d.vy *= -1;
-        cx.beginPath();
-        cx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        cx.fillStyle = `rgba(${d.c[0]},${d.c[1]},${d.c[2]},${d.a})`;
-        cx.fill();
-      });
-
-      const linkMax = 102;
-      for (let i = 0; i < DOTS.length; i++) {
-        for (let j = i + 1; j < DOTS.length; j++) {
-          const dist = Math.hypot(DOTS[i].x - DOTS[j].x, DOTS[i].y - DOTS[j].y);
-          if (dist >= linkMax) continue;
-          const f = 1 - dist / linkMax;
-          const same =
-            DOTS[i].c[0] === DOTS[j].c[0] &&
-            DOTS[i].c[1] === DOTS[j].c[1] &&
-            DOTS[i].c[2] === DOTS[j].c[2];
-          const cc = same ? DOTS[i].c : GOLD;
-          const base = same ? 0.075 : 0.042;
+      if (!reduceMotion) {
+        DOTS.forEach((d) => {
+          d.x += d.vx;
+          d.y += d.vy;
+          if (d.x < 0 || d.x > W) d.vx *= -1;
+          if (d.y < 0 || d.y > H) d.vy *= -1;
           cx.beginPath();
-          cx.moveTo(DOTS[i].x, DOTS[i].y);
-          cx.lineTo(DOTS[j].x, DOTS[j].y);
-          cx.strokeStyle = `rgba(${cc[0]},${cc[1]},${cc[2]},${base * f})`;
-          cx.lineWidth = same ? 0.32 : 0.22;
-          cx.stroke();
+          cx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+          cx.fillStyle = `rgba(${d.c[0]},${d.c[1]},${d.c[2]},${d.a})`;
+          cx.fill();
+        });
+
+        const linkMax = 102;
+        for (let i = 0; i < DOTS.length; i++) {
+          for (let j = i + 1; j < DOTS.length; j++) {
+            const dist = Math.hypot(DOTS[i].x - DOTS[j].x, DOTS[i].y - DOTS[j].y);
+            if (dist >= linkMax) continue;
+            const f = 1 - dist / linkMax;
+            const same =
+              DOTS[i].c[0] === DOTS[j].c[0] &&
+              DOTS[i].c[1] === DOTS[j].c[1] &&
+              DOTS[i].c[2] === DOTS[j].c[2];
+            const cc = same ? DOTS[i].c : GOLD;
+            const base = same ? 0.075 : 0.042;
+            cx.beginPath();
+            cx.moveTo(DOTS[i].x, DOTS[i].y);
+            cx.lineTo(DOTS[j].x, DOTS[j].y);
+            cx.strokeStyle = `rgba(${cc[0]},${cc[1]},${cc[2]},${base * f})`;
+            cx.lineWidth = same ? 0.32 : 0.22;
+            cx.stroke();
+          }
         }
       }
+    }
 
-      rafId = requestAnimationFrame(paint);
+    function paintLoop() {
+      if (!running || !cx || !cv) return;
+      paintFrame();
+      rafId = requestAnimationFrame(paintLoop);
     }
 
     if (cv && cx) {
       resize();
       window.addEventListener("resize", resize);
-      rafId = requestAnimationFrame(paint);
+      if (reduceMotion) {
+        T = 1200;
+        paintFrame();
+      } else {
+        rafId = requestAnimationFrame(paintLoop);
+      }
     }
 
     const aurora = document.getElementById("aurora");
@@ -202,9 +217,6 @@ export function NoyaLandingClient() {
     };
     document.addEventListener("mousemove", onMove);
 
-    const onScrollBg = () => {
-      scrollY = window.scrollY;
-    };
     const onScroll = () => {
       scrollY = window.scrollY;
       const nav = document.getElementById("nav");

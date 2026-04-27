@@ -57,8 +57,6 @@ const INTEREST_OPTIONS = [
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const WIZARD_STEPS = 3 as const;
-
 export function NoyaLandingWorkWithUs() {
   const [open, setOpen] = useState(false);
   const [workType, setWorkType] = useState<WorkType>("partenaire");

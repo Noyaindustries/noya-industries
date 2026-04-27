@@ -21,7 +21,6 @@ const eq = srcBody.indexOf("=");
 const rhs = srcBody.slice(eq + 1).trim().replace(/;\s*$/, "").trim();
 const html = JSON.parse(rhs);
 
-const segmentRe = /<!--\s*═+\s*([^═]+?)\s*═+\s*-->/;
 const rawParts = html.split(/<!--\s*═+\s*[^═]+?\s*═+\s*-->/);
 
 /** @type {{ key: string; fragment: string }[]} */

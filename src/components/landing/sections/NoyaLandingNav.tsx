@@ -46,6 +46,25 @@ export function NoyaLandingNav() {
           ))}
         </div>
         <div className="nav-right">
+          <button
+            type="button"
+            className="nav-cmd-trigger"
+            aria-label="Ouvrir la navigation rapide"
+            title="Navigation rapide (Ctrl+K)"
+            onClick={() => document.dispatchEvent(new CustomEvent("noya:command-palette"))}
+          >
+            <span className="nav-cmd-trigger-inner" aria-hidden="true">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M4 19h16M4 15h10M4 11h16M4 7h8"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
+            <kbd className="nav-cmd-kbd">K</kbd>
+          </button>
           <button type="button" className="nav-lux-toggle" data-lux-toggle aria-label="Basculer le preset visuel luxe">
             Mode
             <span className="nav-lux-value" data-lux-label>Showroom</span>

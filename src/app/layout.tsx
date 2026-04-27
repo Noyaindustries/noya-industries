@@ -24,6 +24,10 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.noyaindustries.com"),
+  icons: {
+    icon: "/landing/noya-brand-mark.jpg",
+    apple: "/landing/noya-brand-mark.jpg",
+  },
   title: "Noya Industries — African Innovation & Consulting Group",
   description:
     "Cabinet de conseil et d’innovation : stratégie, transformation et écosystèmes pour les organisations en Afrique et à l’international.",

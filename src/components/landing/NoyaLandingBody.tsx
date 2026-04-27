@@ -1,4 +1,5 @@
 import { NoyaLandingBackground } from "./sections/NoyaLandingBackground";
+import { NoyaCommandPalette } from "./NoyaCommandPalette";
 import { NoyaLandingNav } from "./sections/NoyaLandingNav";
 import { NoyaLandingHero } from "./sections/NoyaLandingHero";
 import { NoyaLandingProof } from "./sections/NoyaLandingProof";
@@ -17,6 +18,7 @@ export function NoyaLandingBody() {
   return (
     <>
       <NoyaLandingBackground />
+      <NoyaCommandPalette />
       <NoyaLandingNav />
       <NoyaLandingHero />
       <NoyaLandingProof />
