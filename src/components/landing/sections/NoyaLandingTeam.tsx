@@ -98,7 +98,7 @@ const TEAM_MEMBERS: TeamMember[] = [
   },
   {
     initials: "SE",
-    name: "Sah Hugue Edgar",
+    name: "Hugues - Armel sah",
     role: "Business Developer",
     roleClass: "team-role-green",
     desc: "Prospection, développement des partenariats et pilotage des cycles de vente PADDE-CI, Infinite Core et PRESENZ.",
