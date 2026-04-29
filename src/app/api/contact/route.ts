@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { NOYA_CONTACT_EMAIL } from "@/lib/contact-email";
+
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ForwardPayload = {
@@ -11,73 +13,32 @@ type ForwardPayload = {
   topic: string | null;
 };
 
-async function forwardToInfiniteCore(payload: ForwardPayload) {
-  const endpoint =
-    process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
-    "https://infinitecore.net/api/webhooks/noya-recrutement";
+/** Limite prudente pour les liens mailto (varie selon les clients). */
+const MAILTO_MAX_LEN = 1950;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-    // Vercel Security Checkpoint peut bloquer les requêtes “bot-like”. On envoie un UA
-    // navigateur pour que le webhook accepte les POST server-to-server.
-    "User-Agent":
-      process.env.NOYA_INFINITECORE_WEBHOOK_USER_AGENT ??
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
-  };
+function buildContactMailto(payload: ForwardPayload): string {
+  const topicLine = payload.topic ? `Sujet : ${payload.topic}\n` : "";
+  const companyLine = payload.company ? `Organisation : ${payload.company}\n` : "";
+  const phoneLine = payload.phone ? `Téléphone : ${payload.phone}\n` : "";
+  const body =
+    `${topicLine}${companyLine}${phoneLine}\n---\n\n${payload.message}\n\n—\n${payload.name}\n${payload.email}`;
+  const subject = payload.topic
+    ? `[Site Noya] ${payload.topic} — ${payload.name}`
+    : `[Site Noya] Contact — ${payload.name}`;
 
-  const secret = process.env.NOYA_RECRUTEMENT_WEBHOOK_SECRET;
-  if (secret && secret.trim().length > 0) {
-    headers["X-Webhook-Secret"] = secret.trim();
-  }
-
-  const requestBody =
-    secret && secret.trim().length > 0
-      ? { ...payload, webhookSecret: secret.trim() }
-      : payload;
-
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!res.ok) {
-      let details: unknown = null;
-      try {
-        details = await res.json();
-      } catch {
-        // ignore non-JSON response body
-      }
-
-      const errorFromDetails =
-        details && typeof details === "object" && "error" in details
-          ? (details as Record<string, unknown>).error
-          : undefined;
-
-      return NextResponse.json(
-        {
-          error:
-            typeof errorFromDetails === "string"
-              ? errorFromDetails
-              : "Webhook Infinite Core a refusé la requête.",
-          details,
-        },
-        { status: res.status },
-      );
+  let href = `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (href.length > MAILTO_MAX_LEN) {
+    const suffix = "\n\n[Message tronqué — renvoyez la suite par un second email si besoin.]";
+    let trimmed = body;
+    while (
+      `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`.length >
+        MAILTO_MAX_LEN && trimmed.length > 200
+    ) {
+      trimmed = trimmed.slice(0, Math.floor(trimmed.length * 0.85));
     }
-
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    return NextResponse.json(
-      {
-        error: "Impossible de joindre le webhook Infinite Core.",
-        details: e instanceof Error ? e.message : String(e),
-      },
-      { status: 503 },
-    );
+    href = `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`;
   }
+  return href;
 }
 
 export async function POST(request: Request) {
@@ -117,10 +78,11 @@ export async function POST(request: Request) {
     name,
     email,
     message,
-    company: company ?? null,
-    phone: phone ?? null,
-    topic: topic ?? null,
+    company: company && company.length > 0 ? company : null,
+    phone: phone && phone.length > 0 ? phone : null,
+    topic: topic && topic.length > 0 ? topic : null,
   };
 
-  return forwardToInfiniteCore(payload);
+  const redirect = buildContactMailto(payload);
+  return NextResponse.json({ ok: true as const, redirect });
 }

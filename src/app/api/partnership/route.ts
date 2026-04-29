@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { NOYA_CONTACT_EMAIL } from "@/lib/contact-email";
+
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const MAILTO_MAX_LEN = 1950;
+const WEBHOOK_RETRY_MS = 1800;
 
 type ForwardPayload = {
   workType: "partenaire" | "investisseur";
@@ -20,7 +25,49 @@ type ForwardPayload = {
   interests: string[];
 };
 
-async function forwardToInfiniteCore(payload: ForwardPayload) {
+function buildPartnershipMailto(payload: ForwardPayload): string {
+  const name = `${payload.firstName} ${payload.lastName}`.trim();
+  const mode =
+    payload.workType === "partenaire" ? "Partenariat" : "Investisseur / startup studio";
+  const lines: string[] = [
+    `Type de demande : ${mode}`,
+    "",
+    `Nom : ${name}`,
+    `Email : ${payload.email}`,
+    `Téléphone : ${payload.phone || "—"}`,
+    `Organisation : ${payload.company}`,
+    `Pays : ${payload.country}`,
+  ];
+  if (payload.referral) lines.push(`Référence / parrain : ${payload.referral}`);
+  lines.push("");
+  if (payload.workType === "partenaire") {
+    lines.push(`Type de partenariat : ${payload.partnerType}`);
+    if (payload.sector) lines.push(`Secteur : ${payload.sector}`);
+    lines.push("", "Description :", payload.partnerDescription);
+  } else {
+    lines.push(`Profil investisseur : ${payload.investorProfile}`);
+    if (payload.investorTicket) lines.push(`Ticket : ${payload.investorTicket}`);
+    lines.push(`Entités d'intérêt : ${payload.interests.join(", ") || "—"}`);
+    lines.push("", "Approche / description :", payload.investorDescription);
+  }
+  const body = lines.join("\n");
+  const subject = `[Site Noya] ${mode} — ${payload.company}`;
+  let href = `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (href.length > MAILTO_MAX_LEN) {
+    const suffix = "\n\n[Suite tronquée — complétez par un second email si besoin.]";
+    let trimmed = body;
+    while (
+      `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`.length >
+        MAILTO_MAX_LEN && trimmed.length > 200
+    ) {
+      trimmed = trimmed.slice(0, Math.floor(trimmed.length * 0.85));
+    }
+    href = `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`;
+  }
+  return href;
+}
+
+async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
   const endpoint =
     process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
     "https://infinitecore.net/api/webhooks/noya-recrutement";
@@ -28,8 +75,6 @@ async function forwardToInfiniteCore(payload: ForwardPayload) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
-    // Vercel Security Checkpoint peut bloquer les requêtes “bot-like”.
-    // On envoie un UA navigateur pour passer le contrôle.
     "User-Agent":
       process.env.NOYA_INFINITECORE_WEBHOOK_USER_AGENT ??
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
@@ -45,48 +90,28 @@ async function forwardToInfiniteCore(payload: ForwardPayload) {
       ? { ...payload, webhookSecret: secret.trim() }
       : payload;
 
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(requestBody),
-    });
+  return fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(requestBody),
+  });
+}
 
-    if (!res.ok) {
-      let details: unknown = null;
-      try {
-        details = await res.json();
-      } catch {
-        // ignore non-JSON response body
-      }
-
-      const errorFromDetails =
-        details && typeof details === "object" && "error" in details
-          ? (details as Record<string, unknown>).error
-          : undefined;
-
-      return NextResponse.json(
-        {
-          error:
-            typeof errorFromDetails === "string"
-              ? errorFromDetails
-              : "Webhook Infinite Core a refusé la requête.",
-          details,
-        },
-        { status: res.status },
-      );
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    return NextResponse.json(
-      {
-        error: "Impossible de joindre le webhook Infinite Core.",
-        details: e instanceof Error ? e.message : String(e),
-      },
-      { status: 503 },
-    );
-  }
+function jsonErrorFromResponse(
+  res: Response,
+  details: unknown,
+): { error: string; details?: unknown } {
+  const errorFromDetails =
+    details && typeof details === "object" && "error" in details
+      ? (details as Record<string, unknown>).error
+      : undefined;
+  return {
+    error:
+      typeof errorFromDetails === "string"
+        ? errorFromDetails
+        : "Webhook Infinite Core a refusé la requête.",
+    details,
+  };
 }
 
 export async function POST(request: Request) {
@@ -171,6 +196,44 @@ export async function POST(request: Request) {
     interests,
   };
 
-  // “forward uniquement” : aucune persistance côté Noya.
-  return forwardToInfiniteCore(payload);
+  try {
+    let res = await postToInfiniteCore(payload);
+
+    if (!res.ok && res.status === 429) {
+      await new Promise((r) => setTimeout(r, WEBHOOK_RETRY_MS));
+      res = await postToInfiniteCore(payload);
+    }
+
+    if (res.ok) {
+      return NextResponse.json({ ok: true as const });
+    }
+
+    let details: unknown = null;
+    try {
+      details = await res.json();
+    } catch {
+      // ignore non-JSON response body
+    }
+
+    const status = res.status;
+    if (status === 429 || status === 502 || status === 503 || status === 504) {
+      return NextResponse.json({
+        ok: true as const,
+        redirect: buildPartnershipMailto(payload),
+        fallbackMailto: true as const,
+      });
+    }
+
+    const err = jsonErrorFromResponse(res, details);
+    return NextResponse.json(err, { status: res.status });
+  } catch {
+    return NextResponse.json(
+      {
+        ok: true as const,
+        redirect: buildPartnershipMailto(payload),
+        fallbackMailto: true as const,
+      },
+      { status: 200 },
+    );
+  }
 }

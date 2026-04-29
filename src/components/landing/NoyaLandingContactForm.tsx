@@ -67,11 +67,19 @@ export function NoyaLandingContactForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        redirect?: string;
+      };
       if (!res.ok) {
         playSoftError();
         setStatus("err");
         setErrMsg(data.error ?? "Une erreur est survenue.");
+        return;
+      }
+      if (data.redirect) {
+        playSuccess();
+        window.location.assign(data.redirect);
         return;
       }
       playSuccess();
