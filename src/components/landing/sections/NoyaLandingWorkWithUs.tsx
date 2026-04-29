@@ -14,6 +14,10 @@ import {
   resumeUiAudio,
 } from "@/lib/ui-sounds";
 
+const INFINITECORE_RECRUTEMENT_WEBHOOK_URL =
+  process.env.NEXT_PUBLIC_INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
+  "https://infinitecore.net/api/webhooks/noya-recrutement";
+
 type WorkType = "partenaire" | "investisseur";
 
 type FormState = {
@@ -215,7 +219,9 @@ export function NoyaLandingWorkWithUs() {
     };
 
     try {
-      const response = await fetch("/api/partnership", {
+      // IMPORTANT: on POST directement vers Infinite Core (évite un blocage côté serveur
+      // qui renvoyait des 429/503 lors du proxy).
+      const response = await fetch(INFINITECORE_RECRUTEMENT_WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
