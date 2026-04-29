@@ -40,6 +40,9 @@ type StockSkuRow = {
   price: string;
 };
 
+const RECRUITMENT_URL =
+  process.env.NEXT_PUBLIC_NOYA_RECRUTEMENT_URL ?? "/recrutement#travailler-avec-nous";
+
 const STOCK_CATALOG_ROWS: StockSkuRow[] = [
   {
     ref: "NK-PAPER-A4",
@@ -351,9 +354,10 @@ export function StockPage({
               <button
                 type="button"
                 className="ca-btn primary"
-                onClick={() =>
-                  pushToast("Nouvel article (démo) — formulaire à brancher")
-                }
+                onClick={() => {
+                  pushToast("Redirection vers le formulaire noya partenaire…");
+                  window.location.href = RECRUITMENT_URL;
+                }}
               >
                 ＋ Article
               </button>

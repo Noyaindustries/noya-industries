@@ -8,6 +8,9 @@ type HrPageProps = {
   onHrNavigate?: (s: HrSectionId) => void;
 };
 
+const RECRUITMENT_URL =
+  process.env.NEXT_PUBLIC_NOYA_RECRUTEMENT_URL ?? "/recrutement#travailler-avec-nous";
+
 function TeamList() {
   return (
     <div className="emp-list">
@@ -378,7 +381,13 @@ export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
               <div className="card-sub">Statuts & disponibilité</div>
             </div>
             <div className="card-actions">
-              <button type="button" className="ca-btn primary">
+              <button
+                type="button"
+                className="ca-btn primary"
+                onClick={() => {
+                  window.location.href = RECRUITMENT_URL;
+                }}
+              >
                 ＋ Ajouter
               </button>
             </div>
@@ -409,7 +418,13 @@ export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
               <div className="card-sub">Validation & historique court</div>
             </div>
             <div className="card-actions">
-              <button type="button" className="ca-btn primary">
+              <button
+                type="button"
+                className="ca-btn primary"
+                onClick={() => {
+                  window.location.href = RECRUITMENT_URL;
+                }}
+              >
                 Nouvelle demande
               </button>
             </div>

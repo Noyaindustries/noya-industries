@@ -13,6 +13,9 @@ type CmdItem = {
   kw: string;
 };
 
+const RECRUITMENT_URL =
+  process.env.NEXT_PUBLIC_NOYA_RECRUTEMENT_URL ?? "/recrutement#travailler-avec-nous";
+
 const COMMANDS: CmdItem[] = [
   {
     id: "sec-poles",
@@ -69,7 +72,7 @@ const COMMANDS: CmdItem[] = [
   {
     id: "page-recrutement",
     title: "Recrutement & partenaires",
-    href: "/recrutement",
+    href: RECRUITMENT_URL,
     kw: "recrutement carrière emploi partenaire cv",
   },
 ];

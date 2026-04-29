@@ -1,7 +1,69 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type ForwardPayload = {
+  webhookType: "partnership";
+  workType: "partenaire" | "investisseur";
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  company: string;
+  country: string;
+  referral: string;
+  partnerType: string;
+  sector: string;
+  partnerDescription: string;
+  investorProfile: string;
+  investorTicket: string;
+  investorDescription: string;
+  interests: string[];
+};
+
+async function forwardToInfiniteCore(payload: ForwardPayload) {
+  const endpoint =
+    process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
+    "https://infinitecore.net/api/webhooks/noya-recrutement";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  const secret = process.env.NOYA_RECRUTEMENT_WEBHOOK_SECRET;
+  if (secret && secret.trim().length > 0) {
+    headers["X-Webhook-Secret"] = secret.trim();
+  }
+
+  const requestBody =
+    secret && secret.trim().length > 0
+      ? { ...payload, webhookSecret: secret.trim() }
+      : payload;
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!res.ok) {
+    let details: unknown = null;
+    try {
+      details = await res.json();
+    } catch {
+      // ignore non-JSON response body
+    }
+    return NextResponse.json(
+      {
+        error: "Webhook Infinite Core a refusé la requête.",
+        details,
+      },
+      { status: res.status },
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -74,48 +136,25 @@ export async function POST(request: Request) {
     );
   }
 
-  const fullName = `${firstName} ${lastName}`.trim();
-  const topic = workType === "partenaire" ? "Partenariat" : "Investissement";
+  const payload: ForwardPayload = {
+    webhookType: "partnership",
+    workType: workType as ForwardPayload["workType"],
+    firstName,
+    lastName,
+    email,
+    phone,
+    company,
+    country,
+    referral,
+    partnerType,
+    sector,
+    partnerDescription,
+    investorProfile,
+    investorTicket,
+    investorDescription,
+    interests,
+  };
 
-  const details: string[] = [
-    `Type de demande: ${workType}`,
-    `Prénom: ${firstName}`,
-    `Nom: ${lastName}`,
-    `Entreprise: ${company}`,
-    `Pays: ${country}`,
-    `Téléphone: ${phone || "-"}`,
-    `Origine du contact: ${referral || "-"}`,
-  ];
-
-  if (workType === "partenaire") {
-    details.push(`Type de partenariat: ${partnerType}`);
-    details.push(`Secteur: ${sector || "-"}`);
-    details.push(`Description: ${partnerDescription}`);
-  } else {
-    details.push(`Profil investisseur: ${investorProfile}`);
-    details.push(`Ticket envisagé: ${investorTicket || "-"}`);
-    details.push(`Entités d'intérêt: ${interests.join(", ")}`);
-    details.push(`Approche: ${investorDescription}`);
-  }
-
-  try {
-    await prisma.contactMessage.create({
-      data: {
-        name: fullName,
-        email,
-        company: company || null,
-        phone: phone || null,
-        topic,
-        message: details.join("\n"),
-      },
-    });
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Enregistrement impossible pour le moment." },
-      { status: 500 },
-    );
-  }
+  // “forward uniquement” : aucune persistance côté Noya.
+  return forwardToInfiniteCore(payload);
 }

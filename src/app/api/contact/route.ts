@@ -1,7 +1,60 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type ForwardPayload = {
+  webhookType: "contact";
+  name: string;
+  email: string;
+  message: string;
+  company: string | null;
+  phone: string | null;
+  topic: string | null;
+};
+
+async function forwardToInfiniteCore(payload: ForwardPayload) {
+  const endpoint =
+    process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
+    "https://infinitecore.net/api/webhooks/noya-recrutement";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  const secret = process.env.NOYA_RECRUTEMENT_WEBHOOK_SECRET;
+  if (secret && secret.trim().length > 0) {
+    headers["X-Webhook-Secret"] = secret.trim();
+  }
+
+  const requestBody =
+    secret && secret.trim().length > 0
+      ? { ...payload, webhookSecret: secret.trim() }
+      : payload;
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!res.ok) {
+    let details: unknown = null;
+    try {
+      details = await res.json();
+    } catch {
+      // ignore non-JSON response body
+    }
+    return NextResponse.json(
+      {
+        error: "Webhook Infinite Core a refusé la requête.",
+        details,
+      },
+      { status: res.status },
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -36,30 +89,15 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!process.env.DATABASE_URL) {
-    return NextResponse.json(
-      { error: "Base de données non configurée (DATABASE_URL)." },
-      { status: 503 },
-    );
-  }
+  const payload: ForwardPayload = {
+    webhookType: "contact",
+    name,
+    email,
+    message,
+    company: company ?? null,
+    phone: phone ?? null,
+    topic: topic ?? null,
+  };
 
-  try {
-    await prisma.contactMessage.create({
-      data: {
-        name,
-        email,
-        message,
-        company: company || null,
-        phone: phone || null,
-        topic: topic || null,
-      },
-    });
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    console.error(e);
-    return NextResponse.json(
-      { error: "Enregistrement impossible pour le moment." },
-      { status: 500 },
-    );
-  }
+  return forwardToInfiniteCore(payload);
 }

@@ -156,6 +156,7 @@ type ModalTile = {
   action?: {
     page: DashboardPageId;
     toast: string;
+    redirectToRecruitment?: boolean;
     finance?: FinanceSectionId;
     crm?: CrmSectionId;
     projects?: ProjectsSectionId;
@@ -177,7 +178,8 @@ const MODAL_TILES: ModalTile[] = [
     desc: "Créer un projet client",
     action: {
       page: "projects",
-      toast: "Portefeuille projets ouvert — brouillon mission",
+      toast: "Redirection vers le formulaire noya partenaire…",
+      redirectToRecruitment: true,
       projects: "portfolio",
     },
   },
@@ -190,7 +192,8 @@ const MODAL_TILES: ModalTile[] = [
     desc: "Générer et envoyer",
     action: {
       page: "finance",
-      toast: "Facturation ouverte — formulaire à venir",
+      toast: "Redirection vers le formulaire noya partenaire…",
+      redirectToRecruitment: true,
       finance: "invoices",
     },
   },
@@ -203,7 +206,8 @@ const MODAL_TILES: ModalTile[] = [
     desc: "Ajouter au CRM",
     action: {
       page: "crm",
-      toast: "Répertoire CRM ouvert — fiche client à venir",
+      toast: "Redirection vers le formulaire noya partenaire…",
+      redirectToRecruitment: true,
       crm: "accounts",
     },
   },
@@ -216,11 +220,15 @@ const MODAL_TILES: ModalTile[] = [
     desc: "Agenda & Rappels",
     action: {
       page: "crm",
-      toast: "Activités CRM — planification à venir",
+      toast: "Redirection vers le formulaire noya partenaire…",
+      redirectToRecruitment: true,
       crm: "activities",
     },
   },
 ];
+
+const RECRUITMENT_URL =
+  process.env.NEXT_PUBLIC_NOYA_RECRUTEMENT_URL ?? "/recrutement#travailler-avec-nous";
 
 export function NoyaDashboard() {
   const { globalSearch, setGlobalSearch, pushToast } = useDashboardUi();
@@ -354,6 +362,9 @@ export function NoyaDashboard() {
       if (a.academy !== undefined) setAcademySection(a.academy);
       if (a.settings !== undefined) setSettingsSection(a.settings);
       pushToast(a.toast);
+      if (a.redirectToRecruitment) {
+        window.location.href = RECRUITMENT_URL;
+      }
     },
     [pushToast],
   );
