@@ -1,0 +1,17 @@
+{
+  "workType": "partenaire",
+  "firstName": "Test",
+  "lastName": "API",
+  "email": "test@example.com",
+  "phone": "",
+  "company": "Test Co",
+  "country": "CI",
+  "referral": "",
+  "partnerType": "Test",
+  "sector": "",
+  "partnerDescription": "Message de test pour verifier le webhook noya-recrutement.",
+  "investorProfile": "",
+  "investorTicket": "",
+  "investorDescription": "",
+  "interests": []
+}

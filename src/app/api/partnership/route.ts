@@ -97,6 +97,16 @@ async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
   });
 }
 
+async function readJsonBody(res: Response): Promise<unknown> {
+  try {
+    const text = await res.text();
+    if (!text.trim()) return null;
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 function jsonErrorFromResponse(
   res: Response,
   details: unknown,
@@ -204,19 +214,30 @@ export async function POST(request: Request) {
       res = await postToInfiniteCore(payload);
     }
 
-    if (res.ok) {
+    const details = await readJsonBody(res);
+
+    const upstreamReportsFailure =
+      details !== null &&
+      typeof details === "object" &&
+      "success" in details &&
+      (details as Record<string, unknown>).success === false;
+
+    if (res.ok && !upstreamReportsFailure) {
       return NextResponse.json({ ok: true as const });
     }
 
-    let details: unknown = null;
-    try {
-      details = await res.json();
-    } catch {
-      // ignore non-JSON response body
-    }
-
     const status = res.status;
-    if (status === 429 || status === 502 || status === 503 || status === 504) {
+
+    const mailtoFallback =
+      upstreamReportsFailure ||
+      status === 429 ||
+      status === 404 ||
+      status === 502 ||
+      status === 503 ||
+      status === 504 ||
+      (status >= 500 && status < 600);
+
+    if (mailtoFallback && status !== 401 && status !== 403) {
       return NextResponse.json({
         ok: true as const,
         redirect: buildPartnershipMailto(payload),
@@ -225,7 +246,7 @@ export async function POST(request: Request) {
     }
 
     const err = jsonErrorFromResponse(res, details);
-    return NextResponse.json(err, { status: res.status });
+    return NextResponse.json(err, { status: status || 502 });
   } catch {
     return NextResponse.json(
       {

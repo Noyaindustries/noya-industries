@@ -21,6 +21,7 @@ export function NoyaLandingContactForm({
   const isRecruitment = mode === "recruitment";
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
   const [errMsg, setErrMsg] = useState("");
+  const [successViaMailto, setSuccessViaMailto] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,6 +52,7 @@ export function NoyaLandingContactForm({
 
     setStatus("loading");
     setErrMsg("");
+    setSuccessViaMailto(false);
 
     const payload = {
       name,
@@ -79,7 +81,12 @@ export function NoyaLandingContactForm({
       }
       if (data.redirect) {
         playSuccess();
-        window.location.assign(data.redirect);
+        form.reset();
+        setSuccessViaMailto(true);
+        setStatus("ok");
+        window.setTimeout(() => {
+          window.location.assign(data.redirect!);
+        }, 2400);
         return;
       }
       playSuccess();
@@ -108,17 +115,31 @@ export function NoyaLandingContactForm({
           </svg>
         </div>
         <div className="form-success-title">
-          {isRecruitment ? "Candidature envoyée" : "Message transmis"}
+          {successViaMailto
+            ? "Ouvrez votre messagerie"
+            : isRecruitment
+              ? "Candidature envoyée"
+              : "Message transmis"}
         </div>
         <p className="form-success-copy">
-          {isRecruitment
-            ? "Nous vous recontactons si votre profil correspond à nos besoins."
-            : "Réponse sous 24h ouvrables par email ou WhatsApp."}
+          {successViaMailto ? (
+            <>
+              Dans quelques secondes, votre logiciel mail s’ouvre avec le message prêt pour
+              contact@noyaindustries.com. Il vous suffit d’appuyer sur Envoyer.
+            </>
+          ) : isRecruitment ? (
+            "Nous vous recontactons si votre profil correspond à nos besoins."
+          ) : (
+            "Réponse sous 24h ouvrables par email ou WhatsApp."
+          )}
         </p>
         <button
           type="button"
           className="nox-btn-ghost form-success-reset"
-          onClick={() => setStatus("idle")}
+          onClick={() => {
+            setSuccessViaMailto(false);
+            setStatus("idle");
+          }}
         >
           Nouvelle demande
         </button>

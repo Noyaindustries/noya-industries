@@ -5,11 +5,13 @@ import { useState } from "react";
 export function ContactForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
   const [errMsg, setErrMsg] = useState("");
+  const [successViaMailto, setSuccessViaMailto] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
     setErrMsg("");
+    setSuccessViaMailto(false);
     const form = e.currentTarget;
     const fd = new FormData(form);
     const payload = {
@@ -36,7 +38,12 @@ export function ContactForm() {
         return;
       }
       if (data.redirect) {
-        window.location.assign(data.redirect);
+        form.reset();
+        setSuccessViaMailto(true);
+        setStatus("ok");
+        window.setTimeout(() => {
+          window.location.assign(data.redirect!);
+        }, 2400);
         return;
       }
       setStatus("ok");
@@ -128,7 +135,15 @@ export function ContactForm() {
       </label>
       {status === "ok" ? (
         <p className="text-sm text-noya-gold-soft" role="status">
-          Merci — votre message a bien été enregistré. Nous revenons vers vous sous 48h ouvrées.
+          {successViaMailto ? (
+            <>
+              Merci — votre message est prêt. Votre messagerie s’ouvrira dans un instant sur
+              contact@noyaindustries.com ; finalisez l’envoi depuis votre boîte mail. Réponse sous 48h
+              ouvrées à réception.
+            </>
+          ) : (
+            <>Merci — votre message a bien été enregistré. Nous revenons vers vous sous 48h ouvrées.</>
+          )}
         </p>
       ) : null}
       {status === "err" ? (
