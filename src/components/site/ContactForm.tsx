@@ -138,7 +138,7 @@ export function ContactForm() {
           {successViaMailto ? (
             <>
               Merci — votre message est prêt. Votre messagerie s’ouvrira dans un instant sur
-              contact@noyaindustries.com ; finalisez l’envoi depuis votre boîte mail. Réponse sous 48h
+              services@noyaindustries.com ; finalisez l’envoi depuis votre boîte mail. Réponse sous 48h
               ouvrées à réception.
             </>
           ) : (

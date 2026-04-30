@@ -84,5 +84,24 @@ export async function POST(request: Request) {
   };
 
   const redirect = buildContactMailto(payload);
+  // #region agent log
+  fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+    body: JSON.stringify({
+      sessionId: "1de7f5",
+      runId: "pre-fix",
+      hypothesisId: "H1,H2,H3",
+      location: "contact/route.ts:POST:redirect-built",
+      message: "Contact redirect generated",
+      data: {
+        recipient: NOYA_CONTACT_EMAIL,
+        usesMailto: redirect.startsWith("mailto:"),
+        redirectPreview: redirect.slice(0, 160),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   return NextResponse.json({ ok: true as const, redirect });
 }

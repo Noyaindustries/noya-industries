@@ -125,7 +125,7 @@ export function NoyaLandingContactForm({
           {successViaMailto ? (
             <>
               Dans quelques secondes, votre logiciel mail s’ouvre avec le message prêt pour
-              contact@noyaindustries.com. Il vous suffit d’appuyer sur Envoyer.
+              services@noyaindustries.com. Il vous suffit d’appuyer sur Envoyer.
             </>
           ) : isRecruitment ? (
             "Nous vous recontactons si votre profil correspond à nos besoins."
