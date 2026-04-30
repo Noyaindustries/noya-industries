@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const WEBHOOK_RETRY_MS = 1800;
+const WEBHOOK_MAX_RETRIES = 3;
 
 type ForwardPayload = {
   workType: "partenaire" | "investisseur";
@@ -24,17 +25,34 @@ type ForwardPayload = {
 };
 
 function buildIdempotencyKey(payload: ForwardPayload): string {
-  const minuteBucket = Math.floor(Date.now() / 60_000);
+  const timeBucket = Math.floor(Date.now() / 10_000);
   const source = [
     payload.workType,
     payload.email.trim().toLowerCase(),
     payload.company.trim().toLowerCase(),
     payload.firstName.trim().toLowerCase(),
     payload.lastName.trim().toLowerCase(),
-    String(minuteBucket),
+    String(timeBucket),
   ].join("|");
 
   return createHash("sha256").update(source).digest("hex");
+}
+
+function parseRetryAfterMs(retryAfter: string | null): number | null {
+  if (!retryAfter) return null;
+
+  const asSeconds = Number(retryAfter);
+  if (Number.isFinite(asSeconds) && asSeconds > 0) {
+    return Math.min(asSeconds * 1000, 15_000);
+  }
+
+  const asDate = Date.parse(retryAfter);
+  if (!Number.isNaN(asDate)) {
+    const delta = asDate - Date.now();
+    if (delta > 0) return Math.min(delta, 15_000);
+  }
+
+  return null;
 }
 
 async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
@@ -55,18 +73,13 @@ async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
     headers["X-Webhook-Secret"] = secret.trim();
   }
 
-  const requestBody =
-    secret && secret.trim().length > 0
-      ? { ...payload, webhookSecret: secret.trim() }
-      : payload;
   const idempotencyKey = buildIdempotencyKey(payload);
-
   headers["X-Idempotency-Key"] = idempotencyKey;
 
   return fetch(endpoint, {
     method: "POST",
     headers,
-    body: JSON.stringify({ ...requestBody, idempotencyKey }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -181,10 +194,13 @@ export async function POST(request: Request) {
 
   try {
     let res = await postToInfiniteCore(payload);
+    let attempts = 1;
 
-    if (!res.ok && res.status === 429) {
-      await new Promise((r) => setTimeout(r, WEBHOOK_RETRY_MS));
+    while (!res.ok && res.status === 429 && attempts < WEBHOOK_MAX_RETRIES) {
+      const waitMs = parseRetryAfterMs(res.headers.get("Retry-After")) ?? WEBHOOK_RETRY_MS;
+      await new Promise((r) => setTimeout(r, waitMs));
       res = await postToInfiniteCore(payload);
+      attempts += 1;
     }
 
     const details = await readJsonBody(res);
