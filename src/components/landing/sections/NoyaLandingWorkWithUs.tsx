@@ -194,6 +194,8 @@ export function NoyaLandingWorkWithUs() {
   };
 
   const submit = async () => {
+    if (sending) return;
+
     const e3 = validateStep3();
     if (e3) {
       playSoftError();

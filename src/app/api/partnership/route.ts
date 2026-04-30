@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -22,6 +23,20 @@ type ForwardPayload = {
   interests: string[];
 };
 
+function buildIdempotencyKey(payload: ForwardPayload): string {
+  const minuteBucket = Math.floor(Date.now() / 60_000);
+  const source = [
+    payload.workType,
+    payload.email.trim().toLowerCase(),
+    payload.company.trim().toLowerCase(),
+    payload.firstName.trim().toLowerCase(),
+    payload.lastName.trim().toLowerCase(),
+    String(minuteBucket),
+  ].join("|");
+
+  return createHash("sha256").update(source).digest("hex");
+}
+
 async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
   const endpoint =
     process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
@@ -44,11 +59,14 @@ async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
     secret && secret.trim().length > 0
       ? { ...payload, webhookSecret: secret.trim() }
       : payload;
+  const idempotencyKey = buildIdempotencyKey(payload);
+
+  headers["X-Idempotency-Key"] = idempotencyKey;
 
   return fetch(endpoint, {
     method: "POST",
     headers,
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify({ ...requestBody, idempotencyKey }),
   });
 }
 
