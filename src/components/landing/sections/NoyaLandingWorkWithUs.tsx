@@ -217,6 +217,28 @@ export function NoyaLandingWorkWithUs() {
     };
 
     try {
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+        body: JSON.stringify({
+          sessionId: "1de7f5",
+          runId: "pre-fix",
+          hypothesisId: "H3,H4",
+          location: "NoyaLandingWorkWithUs.tsx:submit:before-fetch",
+          message: "Submitting partnership form",
+          data: {
+            workType: payload.workType,
+            interestsCount: payload.interests.length,
+            hasPartnerType: Boolean(payload.partnerType),
+            hasPartnerDescription: Boolean(payload.partnerDescription?.trim()),
+            hasInvestorProfile: Boolean(payload.investorProfile?.trim()),
+            hasInvestorDescription: Boolean(payload.investorDescription?.trim()),
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       const response = await fetch("/api/partnership", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -227,6 +249,21 @@ export function NoyaLandingWorkWithUs() {
         error?: string;
         ok?: boolean;
       } | null;
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+        body: JSON.stringify({
+          sessionId: "1de7f5",
+          runId: "pre-fix",
+          hypothesisId: "H1,H3",
+          location: "NoyaLandingWorkWithUs.tsx:submit:after-fetch",
+          message: "Partnership API response received",
+          data: { status: response.status, ok: response.ok, apiOk: Boolean(data?.ok), apiError: data?.error ?? null },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
 
       if (!response.ok) {
         throw new Error(data?.error || "Envoi impossible pour le moment.");
@@ -239,6 +276,24 @@ export function NoyaLandingWorkWithUs() {
       playSuccess();
       setDone(true);
     } catch (submitError) {
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+        body: JSON.stringify({
+          sessionId: "1de7f5",
+          runId: "pre-fix",
+          hypothesisId: "H3",
+          location: "NoyaLandingWorkWithUs.tsx:submit:catch",
+          message: "Partnership submit failed in client",
+          data: {
+            errorMessage:
+              submitError instanceof Error ? submitError.message : "unknown-error",
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       playSoftError();
       setError(
         submitError instanceof Error

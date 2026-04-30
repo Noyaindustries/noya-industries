@@ -210,6 +210,27 @@ export async function POST(request: Request) {
   };
 
   try {
+    // #region agent log
+    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+      body: JSON.stringify({
+        sessionId: "1de7f5",
+        runId: "pre-fix",
+        hypothesisId: "H1,H4,H5",
+        location: "route.ts:POST:validated",
+        message: "Partnership payload validated server-side",
+        data: {
+          workType: payload.workType,
+          hasPartnerType: Boolean(payload.partnerType),
+          hasPartnerDescription: Boolean(payload.partnerDescription),
+          interestsCount: payload.interests.length,
+          idempotencyKeyPrefix: buildIdempotencyKey(payload).slice(0, 12),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     logPartnershipDebug("incoming request validated", {
       workType: payload.workType,
       emailHash: createHash("sha256")
@@ -221,6 +242,21 @@ export async function POST(request: Request) {
 
     let res = await postToInfiniteCore(payload);
     let attempts = 1;
+    // #region agent log
+    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+      body: JSON.stringify({
+        sessionId: "1de7f5",
+        runId: "pre-fix",
+        hypothesisId: "H1,H2",
+        location: "route.ts:POST:upstream-first-response",
+        message: "Received first upstream response",
+        data: { status: res.status, retryAfter: res.headers.get("Retry-After") },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     logPartnershipDebug("upstream response", {
       attempt: attempts,
       status: res.status,
@@ -236,6 +272,21 @@ export async function POST(request: Request) {
       await new Promise((r) => setTimeout(r, waitMs));
       res = await postToInfiniteCore(payload);
       attempts += 1;
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+        body: JSON.stringify({
+          sessionId: "1de7f5",
+          runId: "pre-fix",
+          hypothesisId: "H1,H2,H5",
+          location: "route.ts:POST:upstream-retry-response",
+          message: "Received upstream response after retry",
+          data: { attempt: attempts, status: res.status, retryAfter: res.headers.get("Retry-After") },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       logPartnershipDebug("upstream response", {
         attempt: attempts,
         status: res.status,
@@ -258,6 +309,21 @@ export async function POST(request: Request) {
     const status = res.status || 502;
     const err = jsonErrorFromResponse(res, details);
     const httpStatus = status >= 400 && status < 600 ? status : 502;
+    // #region agent log
+    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+      body: JSON.stringify({
+        sessionId: "1de7f5",
+        runId: "pre-fix",
+        hypothesisId: "H1,H2,H4",
+        location: "route.ts:POST:return-error",
+        message: "Returning partnership API error",
+        data: { upstreamStatus: status, httpStatus, error: err.error, attempts },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     logPartnershipDebug("returning error response", {
       upstreamStatus: status,
       httpStatus,
