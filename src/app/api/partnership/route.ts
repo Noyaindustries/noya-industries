@@ -55,6 +55,23 @@ function parseRetryAfterMs(retryAfter: string | null): number | null {
   return null;
 }
 
+function isPartnershipDebugEnabled(): boolean {
+  const raw = process.env.NOYA_PARTNERSHIP_DEBUG;
+  if (!raw) return process.env.NODE_ENV !== "production";
+  const normalized = raw.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+function logPartnershipDebug(message: string, details?: Record<string, unknown>) {
+  if (!isPartnershipDebugEnabled()) return;
+  const prefix = "[partnership-api]";
+  if (details) {
+    console.info(`${prefix} ${message}`, details);
+    return;
+  }
+  console.info(`${prefix} ${message}`);
+}
+
 async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
   const endpoint =
     process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
@@ -193,14 +210,37 @@ export async function POST(request: Request) {
   };
 
   try {
+    logPartnershipDebug("incoming request validated", {
+      workType: payload.workType,
+      emailHash: createHash("sha256")
+        .update(payload.email.trim().toLowerCase())
+        .digest("hex")
+        .slice(0, 12),
+      company: payload.company,
+    });
+
     let res = await postToInfiniteCore(payload);
     let attempts = 1;
+    logPartnershipDebug("upstream response", {
+      attempt: attempts,
+      status: res.status,
+      retryAfter: res.headers.get("Retry-After"),
+    });
 
     while (!res.ok && res.status === 429 && attempts < WEBHOOK_MAX_RETRIES) {
       const waitMs = parseRetryAfterMs(res.headers.get("Retry-After")) ?? WEBHOOK_RETRY_MS;
+      logPartnershipDebug("upstream returned 429, retrying", {
+        attempt: attempts,
+        nextAttemptInMs: waitMs,
+      });
       await new Promise((r) => setTimeout(r, waitMs));
       res = await postToInfiniteCore(payload);
       attempts += 1;
+      logPartnershipDebug("upstream response", {
+        attempt: attempts,
+        status: res.status,
+        retryAfter: res.headers.get("Retry-After"),
+      });
     }
 
     const details = await readJsonBody(res);
@@ -218,8 +258,14 @@ export async function POST(request: Request) {
     const status = res.status || 502;
     const err = jsonErrorFromResponse(res, details);
     const httpStatus = status >= 400 && status < 600 ? status : 502;
+    logPartnershipDebug("returning error response", {
+      upstreamStatus: status,
+      httpStatus,
+      upstreamReportsFailure,
+    });
     return NextResponse.json(err, { status: httpStatus });
   } catch {
+    logPartnershipDebug("unhandled exception during upstream relay");
     return NextResponse.json(
       {
         error:
