@@ -5,6 +5,8 @@ const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const WEBHOOK_RETRY_MS = 1800;
 const WEBHOOK_MAX_RETRIES = 3;
+const DEFAULT_INFINITECORE_WEBHOOK_URL =
+  "https://www.infinitecore.net/api/webhooks/noya-recrutement";
 
 type ForwardPayload = {
   workType: "partenaire" | "investisseur";
@@ -73,9 +75,7 @@ function logPartnershipDebug(message: string, details?: Record<string, unknown>)
 }
 
 async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
-  const endpoint =
-    process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
-    "https://infinitecore.net/api/webhooks/noya-recrutement";
+  const endpoint = process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ?? DEFAULT_INFINITECORE_WEBHOOK_URL;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -100,13 +100,17 @@ async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
   });
 }
 
-async function readJsonBody(res: Response): Promise<unknown> {
+async function readResponseBody(res: Response): Promise<{ details: unknown; rawText: string }> {
   try {
     const text = await res.text();
-    if (!text.trim()) return null;
-    return JSON.parse(text) as unknown;
+    if (!text.trim()) return { details: null, rawText: "" };
+    try {
+      return { details: JSON.parse(text) as unknown, rawText: text };
+    } catch {
+      return { details: null, rawText: text };
+    }
   } catch {
-    return null;
+    return { details: null, rawText: "" };
   }
 }
 
@@ -210,6 +214,14 @@ export async function POST(request: Request) {
   };
 
   try {
+    const endpoint = process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ?? DEFAULT_INFINITECORE_WEBHOOK_URL;
+    const webhookSecret = process.env.NOYA_RECRUTEMENT_WEBHOOK_SECRET?.trim() ?? "";
+    let endpointHost = "invalid-endpoint";
+    try {
+      endpointHost = new URL(endpoint).host;
+    } catch {
+      endpointHost = "invalid-endpoint";
+    }
     // #region agent log
     fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
       method: "POST",
@@ -226,11 +238,39 @@ export async function POST(request: Request) {
           hasPartnerDescription: Boolean(payload.partnerDescription),
           interestsCount: payload.interests.length,
           idempotencyKeyPrefix: buildIdempotencyKey(payload).slice(0, 12),
+          endpointHost,
+          hasWebhookSecret: webhookSecret.length > 0,
+          hasCustomUserAgent: Boolean(process.env.NOYA_INFINITECORE_WEBHOOK_USER_AGENT?.trim()),
         },
         timestamp: Date.now(),
       }),
     }).catch(() => {});
     // #endregion
+
+    if (webhookSecret.length === 0) {
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+        body: JSON.stringify({
+          sessionId: "1de7f5",
+          runId: "post-fix",
+          hypothesisId: "H6",
+          location: "route.ts:POST:missing-webhook-secret",
+          message: "Webhook secret missing, aborting upstream call",
+          data: { endpointHost },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      return NextResponse.json(
+        {
+          error:
+            "Configuration manquante: NOYA_RECRUTEMENT_WEBHOOK_SECRET. Ajoutez cette variable d'environnement pour activer l'envoi du formulaire partenaire.",
+        },
+        { status: 503 },
+      );
+    }
     logPartnershipDebug("incoming request validated", {
       workType: payload.workType,
       emailHash: createHash("sha256")
@@ -294,7 +334,34 @@ export async function POST(request: Request) {
       });
     }
 
-    const details = await readJsonBody(res);
+    const { details, rawText } = await readResponseBody(res);
+    // #region agent log
+    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+      body: JSON.stringify({
+        sessionId: "1de7f5",
+        runId: "pre-fix",
+        hypothesisId: "H6,H7,H8",
+        location: "route.ts:POST:upstream-details",
+        message: "Parsed upstream payload details",
+        data: {
+          status: res.status,
+          hasJsonDetails: details !== null,
+          detailKeys:
+            details && typeof details === "object" ? Object.keys(details as Record<string, unknown>).slice(0, 6) : [],
+          detailError:
+            details && typeof details === "object" && "error" in details
+              ? (details as Record<string, unknown>).error
+              : null,
+          checkpointDetected:
+            res.status === 429 &&
+            rawText.toLowerCase().includes("vercel security checkpoint"),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     const upstreamReportsFailure =
       details !== null &&
@@ -304,6 +371,18 @@ export async function POST(request: Request) {
 
     if (res.ok && !upstreamReportsFailure) {
       return NextResponse.json({ ok: true as const });
+    }
+
+    const checkpointDetected =
+      res.status === 429 && rawText.toLowerCase().includes("vercel security checkpoint");
+    if (checkpointDetected) {
+      return NextResponse.json(
+        {
+          error:
+            "Le webhook Infinite Core est bloqué par Vercel Security Checkpoint (protection anti-bot). Autorisez l'appel serveur à cette route ou désactivez la protection pour ce webhook.",
+        },
+        { status: 503 },
+      );
     }
 
     const status = res.status || 502;

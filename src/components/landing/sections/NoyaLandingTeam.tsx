@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LANDING_IMG } from "../landingAssets";
 
 type TeamMember = {
@@ -128,6 +128,11 @@ const TEAM_MEMBERS: TeamMember[] = [
 
 export function NoyaLandingTeam() {
   const marqueeRef = useRef<HTMLDivElement | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const scrollCards = (direction: "left" | "right") => {
     const container = marqueeRef.current;
@@ -161,7 +166,7 @@ export function NoyaLandingTeam() {
               key={`${member.name}-${idx}`}
               className={`team-card rv${idx === 1 ? " d1" : ""}${idx === 2 ? " d2" : ""}`}
             >
-              {member.photo ? (
+              {isHydrated && member.photo ? (
                 <img
                   className="team-photo"
                   src={member.photo}
