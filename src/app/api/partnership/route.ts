@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { NOYA_CONTACT_EMAIL } from "@/lib/contact-email";
-
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const MAILTO_MAX_LEN = 1950;
 const WEBHOOK_RETRY_MS = 1800;
 
 type ForwardPayload = {
@@ -24,48 +21,6 @@ type ForwardPayload = {
   investorDescription: string;
   interests: string[];
 };
-
-function buildPartnershipMailto(payload: ForwardPayload): string {
-  const name = `${payload.firstName} ${payload.lastName}`.trim();
-  const mode =
-    payload.workType === "partenaire" ? "Partenariat" : "Investisseur / startup studio";
-  const lines: string[] = [
-    `Type de demande : ${mode}`,
-    "",
-    `Nom : ${name}`,
-    `Email : ${payload.email}`,
-    `Téléphone : ${payload.phone || "—"}`,
-    `Organisation : ${payload.company}`,
-    `Pays : ${payload.country}`,
-  ];
-  if (payload.referral) lines.push(`Référence / parrain : ${payload.referral}`);
-  lines.push("");
-  if (payload.workType === "partenaire") {
-    lines.push(`Type de partenariat : ${payload.partnerType}`);
-    if (payload.sector) lines.push(`Secteur : ${payload.sector}`);
-    lines.push("", "Description :", payload.partnerDescription);
-  } else {
-    lines.push(`Profil investisseur : ${payload.investorProfile}`);
-    if (payload.investorTicket) lines.push(`Ticket : ${payload.investorTicket}`);
-    lines.push(`Entités d'intérêt : ${payload.interests.join(", ") || "—"}`);
-    lines.push("", "Approche / description :", payload.investorDescription);
-  }
-  const body = lines.join("\n");
-  const subject = `[Site Noya] ${mode} — ${payload.company}`;
-  let href = `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  if (href.length > MAILTO_MAX_LEN) {
-    const suffix = "\n\n[Suite tronquée — complétez par un second email si besoin.]";
-    let trimmed = body;
-    while (
-      `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`.length >
-        MAILTO_MAX_LEN && trimmed.length > 200
-    ) {
-      trimmed = trimmed.slice(0, Math.floor(trimmed.length * 0.85));
-    }
-    href = `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`;
-  }
-  return href;
-}
 
 async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
   const endpoint =
@@ -226,35 +181,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true as const });
     }
 
-    const status = res.status;
-
-    const mailtoFallback =
-      upstreamReportsFailure ||
-      status === 429 ||
-      status === 404 ||
-      status === 502 ||
-      status === 503 ||
-      status === 504 ||
-      (status >= 500 && status < 600);
-
-    if (mailtoFallback && status !== 401 && status !== 403) {
-      return NextResponse.json({
-        ok: true as const,
-        redirect: buildPartnershipMailto(payload),
-        fallbackMailto: true as const,
-      });
-    }
-
+    const status = res.status || 502;
     const err = jsonErrorFromResponse(res, details);
-    return NextResponse.json(err, { status: status || 502 });
+    const httpStatus = status >= 400 && status < 600 ? status : 502;
+    return NextResponse.json(err, { status: httpStatus });
   } catch {
     return NextResponse.json(
       {
-        ok: true as const,
-        redirect: buildPartnershipMailto(payload),
-        fallbackMailto: true as const,
+        error:
+          "Impossible de joindre le service d'enregistrement des demandes. Vérifiez votre connexion ou réessayez plus tard.",
       },
-      { status: 200 },
+      { status: 502 },
     );
   }
 }

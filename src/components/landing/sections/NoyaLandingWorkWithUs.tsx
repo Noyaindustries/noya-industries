@@ -65,7 +65,6 @@ export function NoyaLandingWorkWithUs() {
   const [interests, setInterests] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
-  const [doneWithMailtoFallback, setDoneWithMailtoFallback] = useState(false);
   const [sending, setSending] = useState(false);
 
   const title = workType === "partenaire" ? "Devenir partenaire" : "Rejoindre notre startup studio";
@@ -143,7 +142,6 @@ export function NoyaLandingWorkWithUs() {
     setWizardStep(1);
     setOpen(true);
     setDone(false);
-    setDoneWithMailtoFallback(false);
     setError("");
     setSending(false);
   };
@@ -157,7 +155,6 @@ export function NoyaLandingWorkWithUs() {
     setForm(DEFAULT_FORM);
     setInterests([]);
     setDone(false);
-    setDoneWithMailtoFallback(false);
     setError("");
     setSending(false);
     setWizardStep(1);
@@ -227,25 +224,17 @@ export function NoyaLandingWorkWithUs() {
       const data = (await response.json().catch(() => null)) as {
         error?: string;
         ok?: boolean;
-        redirect?: string;
       } | null;
 
       if (!response.ok) {
         throw new Error(data?.error || "Envoi impossible pour le moment.");
       }
 
-      if (data?.redirect) {
-        playSuccess();
-        setDoneWithMailtoFallback(true);
-        setDone(true);
-        window.setTimeout(() => {
-          window.location.assign(data.redirect!);
-        }, 2400);
-        return;
+      if (!data?.ok) {
+        throw new Error(data?.error || "Envoi impossible pour le moment.");
       }
 
       playSuccess();
-      setDoneWithMailtoFallback(false);
       setDone(true);
     } catch (submitError) {
       playSoftError();
@@ -667,24 +656,12 @@ export function NoyaLandingWorkWithUs() {
               <div className="rwu-confirm-icon" aria-hidden="true">
                 ✓
               </div>
-              <div className="rwu-confirm-title">
-                {doneWithMailtoFallback ? "Ouvrez votre messagerie" : "Demande envoyée !"}
-              </div>
+              <div className="rwu-confirm-title">Demande envoyée !</div>
               <p className="rwu-confirm-copy">
-                {doneWithMailtoFallback ? (
-                  <>
-                    Votre demande est prête pour contact@noyaindustries.com. Dans environ deux
-                    secondes, votre logiciel mail s’ouvre : il vous suffit alors d’appuyer sur
-                    Envoyer pour nous la transmettre.
-                  </>
-                ) : (
-                  <>
-                    Merci pour votre intérêt pour Noya Industries. Votre demande a bien été
-                    transmise à notre équipe.
-                    <br />
-                    L&apos;équipe vous recontactera dans les 48 heures ouvrées.
-                  </>
-                )}
+                Merci pour votre intérêt pour Noya Industries. Votre demande a bien été transmise à
+                notre équipe.
+                <br />
+                L&apos;équipe vous recontactera dans les 48 heures ouvrées.
               </p>
               <button
                 type="button"
