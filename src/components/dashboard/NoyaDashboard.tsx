@@ -690,6 +690,14 @@ export function NoyaDashboard() {
         </div>
 
         <div className="sb-bottom">
+          <Link href="/dashboard/blog" className="sb-item" title="Gérer les articles blog">
+            <div className="sb-icon">📝</div>
+            Gestion blog
+          </Link>
+          <Link href="/dashboard/team" className="sb-item" title="Gérer les membres de l'équipe">
+            <div className="sb-icon">👤</div>
+            Gestion équipe
+          </Link>
           <div className="sb-user">
             <div className="sb-av">YN</div>
             <div>

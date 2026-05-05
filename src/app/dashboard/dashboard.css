@@ -113,6 +113,15 @@
   color-scheme: light;
 }
 
+/* Route blog admin: this page is rendered directly inside dashboard-root
+   (without .main), so root clipping must be disabled for full-page scroll. */
+.dashboard-root:has(.blog-admin-page) {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  display: block;
+}
+
 /* ═══ Sidebar ═══ */
 .sidebar {
   width: var(--sidebar);
@@ -2605,4 +2614,393 @@
   max-width: 380px;
   margin: 0 auto;
   line-height: 1.65;
+}
+
+/* ═══ Blog Admin Form ═══ */
+.blog-admin-page {
+  min-height: 100vh;
+}
+
+.blog-admin-inner {
+  max-width: 1280px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.blog-admin-toplinks {
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.blog-form-card {
+  width: min(960px, 100%);
+  margin: 0 auto 22px;
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+  overflow: visible;
+  padding-bottom: clamp(20px, 3vw, 28px);
+}
+
+.blog-form-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.blog-form-head h2 {
+  font-size: clamp(1.2rem, 2.4vw, 1.5rem);
+  line-height: 1.2;
+  margin-bottom: 6px;
+  color: rgba(20, 18, 26, 0.96);
+}
+
+.blog-form-head p {
+  color: var(--fog);
+  font-size: 0.96rem;
+}
+
+.blog-form-mode {
+  flex-shrink: 0;
+  border: 1px solid rgba(201, 119, 6, 0.34);
+  border-radius: 999px;
+  background: linear-gradient(160deg, rgba(201, 119, 6, 0.14), rgba(36, 96, 167, 0.12));
+  color: var(--white);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+}
+
+.blog-form-section {
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(247, 243, 236, 0.95));
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.blog-form-section-head h3 {
+  color: rgba(20, 18, 26, 0.96);
+  font-size: 1rem;
+  margin-bottom: 3px;
+}
+
+.blog-form-section-head p {
+  color: var(--fog);
+  font-size: 0.86rem;
+}
+
+.blog-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.blog-field {
+  display: grid;
+  gap: 7px;
+}
+
+.blog-field > span {
+  color: rgba(20, 18, 26, 0.9);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.blog-field > small {
+  color: var(--fog);
+  font-size: 0.79rem;
+  line-height: 1.4;
+}
+
+.blog-field-full {
+  grid-column: 1 / -1;
+}
+
+.blog-field > input,
+.blog-field > textarea,
+.blog-field > select {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.17);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.97);
+  color: rgba(20, 18, 26, 0.95);
+  padding: 10px 12px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    background 0.2s ease;
+}
+
+.blog-team-select {
+  appearance: none;
+}
+
+.blog-field > input::placeholder,
+.blog-field > textarea::placeholder {
+  color: rgba(61, 58, 69, 0.75);
+}
+
+.blog-field > input:focus,
+.blog-field > textarea:focus {
+  border-color: rgba(201, 119, 6, 0.65);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(201, 119, 6, 0.18);
+}
+
+.blog-field > input:disabled {
+  opacity: 1;
+  color: rgba(20, 18, 26, 0.62);
+  border-color: rgba(0, 0, 0, 0.11);
+  background: rgba(241, 235, 223, 0.9);
+  cursor: not-allowed;
+}
+
+.blog-content-area {
+  min-height: 170px;
+  resize: vertical;
+}
+
+.blog-field-error {
+  color: #b42318 !important;
+  font-weight: 600;
+}
+
+.blog-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.11);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.blog-toggle span {
+  color: rgba(20, 18, 26, 0.88);
+  font-size: 0.9rem;
+}
+
+.blog-toggle input {
+  accent-color: var(--gold);
+}
+
+.blog-toggle:focus-within {
+  border-color: rgba(201, 119, 6, 0.55);
+  box-shadow: 0 0 0 3px rgba(201, 119, 6, 0.14);
+}
+
+.blog-form-actions-wrap {
+  position: sticky;
+  bottom: 12px;
+  z-index: 6;
+  margin-top: 10px;
+  margin-inline: 0;
+  padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(250, 246, 238, 0.95), rgba(244, 238, 227, 0.98));
+  -webkit-backdrop-filter: blur(9px);
+  backdrop-filter: blur(9px);
+  box-shadow: 0 8px 22px rgba(20, 18, 26, 0.08);
+}
+
+.blog-form-actions {
+  margin-top: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.blog-form-action-hint {
+  margin-top: 8px;
+  color: var(--fog);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.blog-form-primary {
+  min-width: 240px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.blog-form-secondary {
+  min-width: 220px;
+}
+
+.blog-form-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.blog-form-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.blog-form-actions .btn-hero,
+.blog-form-actions .btn-hero-out {
+  min-height: 46px;
+}
+
+.blog-form-actions .btn-hero:focus-visible,
+.blog-form-actions .btn-hero-out:focus-visible,
+.blog-post-actions .ca-btn:focus-visible,
+.blog-field > input:focus-visible,
+.blog-field > textarea:focus-visible {
+  outline: 2px solid rgba(201, 119, 6, 0.6);
+  outline-offset: 1px;
+}
+
+.blog-image-preview {
+  width: 100%;
+  max-width: 360px;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.13);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.blog-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.blog-image-preview-media {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+.blog-image-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(20, 18, 26, 0.8);
+  font-weight: 550;
+  background:
+    linear-gradient(135deg, rgba(201, 119, 6, 0.12), rgba(36, 96, 167, 0.1)),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.24) 0 10px, rgba(255, 255, 255, 0.1) 10px 20px);
+}
+
+.blog-local-image-input {
+  display: none;
+}
+
+.blog-message {
+  width: min(960px, 100%);
+  margin: 0 auto 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.blog-message-error {
+  color: #7f1d1d;
+  border-color: rgba(185, 28, 28, 0.35);
+  background: rgba(254, 226, 226, 0.92);
+}
+
+.blog-message-success {
+  color: #14532d;
+  border-color: rgba(22, 163, 74, 0.32);
+  background: rgba(220, 252, 231, 0.92);
+}
+
+.blog-posts-card {
+  padding: 18px;
+}
+
+.blog-post-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.09);
+  padding: 12px 0;
+  color: rgba(20, 18, 26, 0.9);
+}
+
+.blog-post-thumb-wrap {
+  margin-top: 8px;
+}
+
+.blog-post-thumb {
+  width: 180px;
+  height: 100px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background-size: cover;
+  background-position: center;
+}
+
+.blog-post-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .blog-form-section {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .blog-form-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .blog-form-mode {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .blog-form-card {
+    padding: 16px;
+    padding-bottom: 18px;
+  }
+
+  .blog-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .blog-image-preview {
+    max-width: 100%;
+    height: 180px;
+  }
+
+  .blog-form-actions-wrap {
+    margin-inline: 0;
+    padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+    bottom: 8px;
+  }
+
+  .blog-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .blog-form-primary,
+  .blog-form-secondary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .blog-form-action-hint {
+    text-align: left;
+  }
 }

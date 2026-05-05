@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LANDING_IMG } from "../landingAssets";
+import { FALLBACK_TEAM_MEMBERS, type TeamMemberRecord, type TeamSocialKind } from "@/lib/team-members";
 
 type TeamMember = {
+  slug: string;
   initials: string;
   name: string;
   role: string;
-  roleClass: string;
+  roleClass: "team-role-gold" | "team-role-blue" | "team-role-green";
   desc: string;
   skills: string[];
   /** `null` = avatar à initiales (pas de photo) */
@@ -25,113 +26,62 @@ function avatarToneFromRole(roleClass: TeamMember["roleClass"]): "gold" | "blue"
   return "blue";
 }
 
-const TEAM_MEMBERS: TeamMember[] = [
-  {
-    initials: "YA",
-    name: "N'guessan Opely Yannick Abraham",
-    role: "Fondateur & Directeur Général",
-    roleClass: "team-role-gold",
-    desc: "Stratégie, développement commercial et pilotage global du groupe Noya Industries.",
-    skills: ["Stratégie", "Développement commercial", "Pilotage global"],
-    photo: LANDING_IMG.founderYannick,
-    socials: [
-      { label: "LinkedIn", href: "#", kind: "linkedin" },
-      { label: "Facebook", href: "#", kind: "facebook" },
-      { label: "Instagram", href: "#", kind: "instagram" },
-    ],
-  },
-  {
-    initials: "JY",
-    name: "Jahmmy Yapo Ahue",
-    role: "Responsable Pôle Technologique",
-    roleClass: "team-role-blue",
-    desc: "Supervision des projets tech, coordination des équipes de développement et garantie qualité des livrables.",
-    skills: ["Supervision tech", "Coordination équipes", "Qualité livrables"],
-    photo: null,
-    socials: [
-      { label: "LinkedIn", href: "#", kind: "linkedin" },
-      { label: "Instagram", href: "#", kind: "instagram" },
-      { label: "X", href: "#", kind: "x" },
-    ],
-  },
-  {
-    initials: "KS",
-    name: "Kouassi Stéphane",
-    role: "Responsable Technique Logiciels",
-    roleClass: "team-role-green",
-    desc: "Développement et maintenance des solutions logicielles.",
-    skills: ["Développement logiciel", "Maintenance", "Fiabilité"],
-    photo: "/landing/team/stephane.png",
-    socials: [
-      { label: "LinkedIn", href: "#", kind: "linkedin" },
-      { label: "TikTok", href: "#", kind: "tiktok" },
-      { label: "Facebook", href: "#", kind: "facebook" },
-    ],
-  },
-  {
-    initials: "JK",
-    name: "Jean-Loïc Koné",
-    role: "Développeur Fullstack & Designer",
-    roleClass: "team-role-blue",
-    desc: "Développement des interfaces, conception graphique et livraison des projets web du groupe.",
-    skills: ["Fullstack", "Design UI", "Livraison web"],
-    photo: null,
-    socials: [
-      { label: "LinkedIn", href: "#", kind: "linkedin" },
-      { label: "Instagram", href: "#", kind: "instagram" },
-      { label: "Facebook", href: "#", kind: "facebook" },
-    ],
-  },
-  {
-    initials: "JB",
-    name: "Jean Bilboa",
-    role: "Consultant Technologique",
-    roleClass: "team-role-gold",
-    desc: "Conseil en architecture système, évaluation des solutions tech et structuration des roadmaps produit.",
-    skills: ["Architecture système", "Évaluation tech", "Roadmap produit"],
-    photo: null,
-    socials: [
-      { label: "LinkedIn", href: "#", kind: "linkedin" },
-      { label: "X", href: "#", kind: "x" },
-      { label: "Facebook", href: "#", kind: "facebook" },
-    ],
-  },
-  {
-    initials: "SE",
-    name: "Hugues - Armel sah",
-    role: "Business Developer",
-    roleClass: "team-role-green",
-    desc: "Prospection, développement des partenariats et pilotage des cycles de vente PADDE-CI, Infinite Core et PRESENZ.",
-    skills: ["Prospection", "Partenariats", "Cycles de vente"],
-    photo: null,
-    socials: [
-      { label: "LinkedIn", href: "#", kind: "linkedin" },
-      { label: "Instagram", href: "#", kind: "instagram" },
-      { label: "TikTok", href: "#", kind: "tiktok" },
-    ],
-  },
-  {
-    initials: "MI",
-    name: "Mbaka Laeticia Imagna",
-    role: "Assistante Polyvalente",
-    roleClass: "team-role-blue",
-    desc: "Gestion de la boutique African Concept Store, phoning et prospection PADDE-CI, animation des réseaux sociaux.",
-    skills: ["Concept Store", "Phoning & prospection", "Réseaux sociaux"],
-    photo: "/landing/team/laeticia.png",
-    socials: [
-      { label: "Facebook", href: "#", kind: "facebook" },
-      { label: "Instagram", href: "#", kind: "instagram" },
-      { label: "TikTok", href: "#", kind: "tiktok" },
-    ],
-  },
-];
+function roleClassFromTone(tone: "gold" | "blue" | "green"): TeamMember["roleClass"] {
+  if (tone === "gold") return "team-role-gold";
+  if (tone === "green") return "team-role-green";
+  return "team-role-blue";
+}
+
+function toTeamMembers(records: TeamMemberRecord[]): TeamMember[] {
+  return records.map((member) => {
+    const socialEntries: { kind: TeamSocialKind; label: string }[] = [
+      { kind: "linkedin", label: "LinkedIn" },
+      { kind: "facebook", label: "Facebook" },
+      { kind: "instagram", label: "Instagram" },
+      { kind: "tiktok", label: "TikTok" },
+      { kind: "x", label: "X" },
+    ];
+    const socials = [
+      ...socialEntries.map((entry) => ({
+        label: entry.label,
+        href: member.socials[entry.kind] ?? "",
+        kind: entry.kind,
+      })),
+    ].filter((social) => social.href && social.href.trim().length > 0);
+    return {
+      slug: member.slug,
+      initials: member.initials,
+      name: member.name,
+      role: member.role,
+      roleClass: roleClassFromTone(member.tone),
+      desc: member.desc,
+      skills: member.skills,
+      photo: member.imageUrl,
+      socials,
+    };
+  });
+}
 
 export function NoyaLandingTeam() {
   const marqueeRef = useRef<HTMLDivElement | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => toTeamMembers(FALLBACK_TEAM_MEMBERS));
 
   useEffect(() => {
-    setIsHydrated(true);
+    queueMicrotask(() => {
+      setIsHydrated(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    void fetch("/api/dashboard/team", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json()) as { members?: TeamMemberRecord[] };
+        if (!data.members || data.members.length === 0) return;
+        setTeamMembers(toTeamMembers(data.members));
+      })
+      .catch(() => {});
   }, []);
 
   const scrollCards = (direction: "left" | "right") => {
@@ -160,10 +110,10 @@ export function NoyaLandingTeam() {
         </div>
         <div className="team-marquee" ref={marqueeRef}>
           <div className="team-track">
-            {TEAM_MEMBERS.map((member, idx) => {
+            {teamMembers.map((member, idx) => {
               return (
             <article
-              key={`${member.name}-${idx}`}
+              key={member.slug}
               className={`team-card rv${idx === 1 ? " d1" : ""}${idx === 2 ? " d2" : ""}`}
             >
               {isHydrated && member.photo ? (

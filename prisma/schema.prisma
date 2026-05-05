@@ -36,3 +36,39 @@ model ContactMessage {
   message   String
   createdAt DateTime @default(now())
 }
+
+model BlogPost {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug      String   @unique
+  category  String
+  title     String
+  excerpt   String
+  imageUrl  String?
+  dateLabel String
+  readTime  String
+  featured  Boolean  @default(false)
+  content   String[]
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TeamMember {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug      String   @unique
+  initials  String
+  name      String
+  role      String
+  tone      String
+  desc      String
+  skills    String[]
+  imageUrl  String?
+  linkedin  String?
+  facebook  String?
+  instagram String?
+  tiktok    String?
+  x         String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

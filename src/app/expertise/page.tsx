@@ -2,6 +2,8 @@ import { NoyaLandingPageChrome } from "@/components/landing/NoyaLandingPageChrom
 import { NoyaLandingPageIntro } from "@/components/landing/NoyaLandingPageIntro";
 import { NoyaLandingBlog } from "@/components/landing/sections/NoyaLandingBlog";
 
+export const revalidate = 0;
+
 export default function ExpertisePage() {
   return (
     <NoyaLandingPageChrome>

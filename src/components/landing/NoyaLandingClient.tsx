@@ -33,15 +33,65 @@ function countUp(el: HTMLElement, target: number, suffix: string) {
 
 export function NoyaLandingClient() {
   useEffect(() => {
+    const instanceId = `nlc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     let root: Root | null = null;
     const mountEl = document.getElementById("noya-landing-contact-root");
+    // #region agent log
+    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+      body: JSON.stringify({
+        sessionId: "1de7f5",
+        runId: "pre-fix",
+        hypothesisId: "R1,R2,R3,R4",
+        location: "NoyaLandingClient.tsx:useEffect:start",
+        message: "NoyaLandingClient effect start",
+        data: {
+          instanceId,
+          pathname: typeof window !== "undefined" ? window.location.pathname : "unknown",
+          hasMountEl: Boolean(mountEl),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     if (mountEl) {
       const mode =
         mountEl.getAttribute("data-form-mode") === "recruitment"
           ? "recruitment"
           : "contact";
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+        body: JSON.stringify({
+          sessionId: "1de7f5",
+          runId: "pre-fix",
+          hypothesisId: "R2,R3",
+          location: "NoyaLandingClient.tsx:useEffect:createRoot",
+          message: "Creating contact root",
+          data: { instanceId, mode },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       root = createRoot(mountEl);
       root.render(<NoyaLandingContactForm mode={mode} />);
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+        body: JSON.stringify({
+          sessionId: "1de7f5",
+          runId: "pre-fix",
+          hypothesisId: "R2,R3",
+          location: "NoyaLandingClient.tsx:useEffect:rootRendered",
+          message: "Contact root rendered",
+          data: { instanceId },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
     }
 
     const cv = document.getElementById("world") as HTMLCanvasElement | null;
@@ -303,9 +353,66 @@ export function NoyaLandingClient() {
     document.addEventListener("click", onScrollClick);
 
     return () => {
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+        body: JSON.stringify({
+          sessionId: "1de7f5",
+          runId: "pre-fix",
+          hypothesisId: "R1,R2,R4",
+          location: "NoyaLandingClient.tsx:useEffect:cleanupStart",
+          message: "NoyaLandingClient cleanup start",
+          data: {
+            instanceId,
+            pathname: typeof window !== "undefined" ? window.location.pathname : "unknown",
+            hasRoot: Boolean(root),
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       running = false;
       cancelAnimationFrame(rafId);
-      root?.unmount();
+      if (root) {
+        // #region agent log
+        fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+          body: JSON.stringify({
+            sessionId: "1de7f5",
+            runId: "pre-fix",
+            hypothesisId: "R1",
+            location: "NoyaLandingClient.tsx:useEffect:beforeUnmount",
+            message: "About to unmount contact root",
+            data: { instanceId },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        // In React dev StrictMode, effect cleanups can run while another render is in progress.
+        // Deferring unmount avoids "Attempted to synchronously unmount a root while React was already rendering."
+        const rootToUnmount = root;
+        root = null;
+        setTimeout(() => {
+          rootToUnmount.unmount();
+        }, 0);
+        // #region agent log
+        fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
+          body: JSON.stringify({
+            sessionId: "1de7f5",
+            runId: "pre-fix",
+            hypothesisId: "R1",
+            location: "NoyaLandingClient.tsx:useEffect:afterUnmount",
+            message: "Contact root unmounted",
+            data: { instanceId },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+      }
       window.removeEventListener("resize", resize);
       document.removeEventListener("mousemove", onMove);
       window.removeEventListener("scroll", onScroll);
