@@ -84,11 +84,26 @@ export default function DashboardTeamPage() {
         body: formData,
       });
       const data = (await response.json()) as { error?: string; url?: string };
+      // #region agent log
+      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "efec23" },
+        body: JSON.stringify({
+          sessionId: "efec23",
+          runId: "pre-fix",
+          hypothesisId: "T1_T2_T3",
+          location: "src/app/dashboard/team/page.tsx:87",
+          message: "Team image upload payload",
+          data: { ok: response.ok, hasUrl: typeof data.url === "string", urlType: typeof data.url },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       if (!response.ok || !data.url) {
         setMessage({ type: "error", text: data.error ?? "Upload image impossible." });
         return;
       }
-      setForm((previous) => ({ ...previous, imageUrl: data.url }));
+      setForm((previous) => ({ ...previous, imageUrl: data.url ?? null }));
       setMessage({ type: "success", text: "Image locale ajoutée avec succès." });
     } catch {
       setMessage({ type: "error", text: "Erreur réseau pendant l'upload de l'image." });
