@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BlogComments } from "@/components/blog/BlogComments";
 import { NoyaLandingPageChrome } from "@/components/landing/NoyaLandingPageChrome";
 import { getBlogPosts, getPostBySlug } from "@/lib/blog-posts";
 
@@ -49,6 +50,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               Parler a un conseiller
             </Link>
           </div>
+          <BlogComments slug={post.slug} />
         </div>
       </section>
     </NoyaLandingPageChrome>

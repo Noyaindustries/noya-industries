@@ -1805,6 +1805,92 @@ h2.display em{
   line-height:1.8;
 }
 
+.blog-comments{
+  margin-top:28px;
+  max-width:760px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:18px;
+  background:rgba(255,255,255,.68);
+}
+.blog-comments-title{
+  margin:0;
+  font-size:1.2rem;
+  color:var(--white);
+}
+.blog-comments-count{
+  margin:6px 0 0;
+  font-size:.88rem;
+  color:var(--fog);
+}
+.blog-comments-form{
+  margin-top:14px;
+  display:grid;
+  gap:10px;
+}
+.blog-comments-field{
+  display:grid;
+  gap:6px;
+}
+.blog-comments-field > span{
+  font-size:.86rem;
+  color:var(--white2);
+}
+.blog-comments-field input,
+.blog-comments-field textarea{
+  width:100%;
+  border:1px solid rgba(0,0,0,.15);
+  border-radius:10px;
+  background:rgba(255,255,255,.94);
+  color:rgba(20,18,26,.95);
+  padding:10px 12px;
+  outline:none;
+}
+.blog-comments-field textarea{
+  min-height:110px;
+  resize:vertical;
+}
+.blog-comments-feedback{
+  margin-top:10px;
+  font-size:.88rem;
+}
+.blog-comments-feedback.is-error{color:#a11a1a}
+.blog-comments-feedback.is-success{color:#176534}
+.blog-comments-list{
+  margin-top:14px;
+  display:grid;
+  gap:10px;
+}
+.blog-comments-empty{
+  margin:0;
+  color:var(--fog);
+  font-size:.9rem;
+}
+.blog-comment-item{
+  border:1px solid rgba(0,0,0,.1);
+  border-radius:10px;
+  background:rgba(255,255,255,.85);
+  padding:10px 12px;
+}
+.blog-comment-item header{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+}
+.blog-comment-item header strong{
+  color:var(--white);
+  font-size:.92rem;
+}
+.blog-comment-item header span{
+  font-size:.8rem;
+  color:var(--fog);
+}
+.blog-comment-item p{
+  margin:8px 0 0;
+  color:var(--fog2);
+  white-space:pre-wrap;
+}
+
 /* ═══════════════════════════════════════════
    TEAM — full photo cards
 ═══════════════════════════════════════════ */
