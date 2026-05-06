@@ -3,6 +3,7 @@ export type DashboardPageId =
   | "finance"
   | "crm"
   | "projects"
+  | "blog"
   | "hr"
   | "stock"
   | "comms"

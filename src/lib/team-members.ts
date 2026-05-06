@@ -70,5 +70,17 @@ export const FALLBACK_TEAM_MEMBERS: TeamMemberRecord[] = [
     socials: { linkedin: "#", facebook: "#", instagram: "#", tiktok: null, x: null },
     order: 3,
   },
+  {
+    slug: "hugues-armel-sah",
+    initials: "SE",
+    name: "Hugues - Armel sah",
+    role: "Business Developer",
+    tone: "green",
+    desc: "Prospection, développement des partenariats et pilotage des cycles de vente PADDE-CI, Infinite Core et PRESENZ.",
+    skills: ["Prospection", "Partenariats", "Cycles de vente"],
+    imageUrl: null,
+    socials: { linkedin: "#", facebook: null, instagram: "#", tiktok: "#", x: null },
+    order: 4,
+  },
 ];
 

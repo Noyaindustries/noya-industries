@@ -53,6 +53,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LANDING_IMG } from "../landing/landingAssets";
 import { useDashboardUi } from "./dashboardUiContext";
 import type { DashboardAlert } from "./dashboardAlerts";
+import { BlogPostsManager } from "./blog/BlogPostsManager";
 import { CrmPage } from "./pages/CrmPage";
 import { FinancePage } from "./pages/FinancePage";
 import { HrPage } from "./pages/HrPage";
@@ -133,13 +134,13 @@ const NAV_GROUPS: { section: string; items: NavItem[] }[] = [
     section: "Ressources",
     items: [
       { id: "hr", icon: "🏢", label: "RH & Équipe" },
-      { id: "stock", icon: "📦", label: "Stock & Achats" },
       { id: "comms", icon: "✉️", label: "Communications", badge: { n: "5" } },
     ],
   },
   {
     section: "Outils",
     items: [
+      { id: "blog", icon: "📝", label: "Gestion Blog" },
       { id: "academy", icon: "🎓", label: "Academy" },
       { id: "settings", icon: "⚙️", label: "Paramètres" },
     ],
@@ -249,8 +250,12 @@ export function NoyaDashboard() {
     useState<SettingsSectionId>("overview");
   const [modalOpen, setModalOpen] = useState(false);
   const [alerts, setAlerts] = useState<DashboardAlert[]>(INITIAL_ALERTS);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [dateStr, setDateStr] = useState("");
   const skipSectionPersist = useRef(true);
+  const notifWrapRef = useRef<HTMLDivElement | null>(null);
+  const exportWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -319,6 +324,31 @@ export function NoyaDashboard() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [modalOpen]);
+
+  useEffect(() => {
+    if (!notifOpen && !exportOpen) return;
+    const onDocClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (notifWrapRef.current && !notifWrapRef.current.contains(target)) {
+        setNotifOpen(false);
+      }
+      if (exportWrapRef.current && !exportWrapRef.current.contains(target)) {
+        setExportOpen(false);
+      }
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNotifOpen(false);
+        setExportOpen(false);
+      }
+    };
+    window.addEventListener("click", onDocClick);
+    window.addEventListener("keydown", onEscape);
+    return () => {
+      window.removeEventListener("click", onDocClick);
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, [notifOpen, exportOpen]);
 
   useEffect(() => {
     // Le 1er passage voit encore les valeurs SSR ; on attend le rendu après restauration localStorage.
@@ -421,6 +451,88 @@ export function NoyaDashboard() {
 
   const clearAlerts = useCallback(() => setAlerts([]), []);
 
+  const exportFilenamePrefix = useMemo(() => {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    return `admin-export-${stamp}`;
+  }, []);
+
+  const downloadFile = useCallback((filename: string, content: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const buildAlertsCsv = useCallback(() => {
+    const header = "id,type,icon,message";
+    const rows = alerts.map((alert) => {
+      const rawContent = typeof alert.content === "string" ? alert.content : "Notification admin";
+      const message = rawContent.replace(/"/g, "\"\"");
+      return `${alert.id},${alert.kind},${alert.icon},"${message}"`;
+    });
+    return [header, ...rows].join("\n");
+  }, [alerts]);
+
+  const handleQuickExport = useCallback((kind: "csv" | "json") => {
+    if (kind === "csv") {
+      const csv = buildAlertsCsv();
+      downloadFile(`${exportFilenamePrefix}.csv`, csv, "text/csv;charset=utf-8;");
+      pushToast("Export CSV généré.");
+    } else {
+      const payload = {
+        generatedAt: new Date().toISOString(),
+        page,
+        sections: {
+          finance: financeSection,
+          crm: crmSection,
+          projects: projectsSection,
+          hr: hrSection,
+          stock: stockSection,
+          comms: commsSection,
+          academy: academySection,
+          settings: settingsSection,
+        },
+        alerts: alerts.map((alert) => ({
+          id: alert.id,
+          type: alert.kind,
+          icon: alert.icon,
+          message: typeof alert.content === "string" ? alert.content : "Notification admin",
+        })),
+      };
+      downloadFile(`${exportFilenamePrefix}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8;");
+      pushToast("Export JSON généré.");
+    }
+    setExportOpen(false);
+  }, [
+    academySection,
+    alerts,
+    buildAlertsCsv,
+    commsSection,
+    crmSection,
+    downloadFile,
+    exportFilenamePrefix,
+    financeSection,
+    hrSection,
+    page,
+    projectsSection,
+    pushToast,
+    settingsSection,
+    stockSection,
+  ]);
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+    } finally {
+      window.location.href = "/admin-login";
+    }
+  }, []);
+
   return (
     <>
       <nav
@@ -471,6 +583,9 @@ export function NoyaDashboard() {
                       }
                       if (item.id === "projects") {
                         setProjectsSection("overview");
+                      }
+                      if (item.id === "blog") {
+                        setHrSection("overview");
                       }
                       if (item.id === "hr") {
                         setHrSection("overview");
@@ -690,14 +805,18 @@ export function NoyaDashboard() {
         </div>
 
         <div className="sb-bottom">
-          <Link href="/dashboard/blog" className="sb-item" title="Gérer les articles blog">
-            <div className="sb-icon">📝</div>
-            Gestion blog
-          </Link>
-          <Link href="/dashboard/team" className="sb-item" title="Gérer les membres de l'équipe">
+          <button
+            type="button"
+            className={`sb-item${page === "hr" && hrSection === "team" ? " active" : ""}`}
+            title="Gérer les membres de l'équipe"
+            onClick={() => {
+              setPage("hr");
+              setHrSection("team");
+            }}
+          >
             <div className="sb-icon">👤</div>
             Gestion équipe
-          </Link>
+          </button>
           <div className="sb-user">
             <div className="sb-av">YN</div>
             <div>
@@ -723,33 +842,82 @@ export function NoyaDashboard() {
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
             />
-            <button
-              type="button"
-              className="tb-btn"
-              title="Notifications"
-              onClick={() =>
-                pushToast("3 notifications (démo) — centre à venir")
-              }
-            >
-              🔔
-              <span className="tb-notif" />
-            </button>
-            <button
-              type="button"
-              className="tb-btn"
-              title="Exporter"
-              onClick={() =>
-                pushToast("Export CSV / PDF (démo) — préparation…")
-              }
-            >
-              📤
-            </button>
+            <div className="tb-menu-wrap" ref={notifWrapRef}>
+              <button
+                type="button"
+                className="tb-btn"
+                title="Notifications"
+                onClick={() => {
+                  setNotifOpen((previous) => !previous);
+                  setExportOpen(false);
+                }}
+              >
+                🔔
+                {alerts.length > 0 ? <span className="tb-notif" /> : null}
+              </button>
+              {notifOpen ? (
+                <div className="tb-popover" role="dialog" aria-label="Notifications admin">
+                  <div className="tb-popover-head">
+                    <strong>Notifications</strong>
+                    <button type="button" className="tb-popover-link" onClick={clearAlerts}>
+                      Tout marquer lu
+                    </button>
+                  </div>
+                  <div className="tb-popover-list">
+                    {alerts.length === 0 ? (
+                      <p className="tb-popover-empty">Aucune notification.</p>
+                    ) : (
+                      alerts.map((alert) => (
+                        <div key={alert.id} className={`tb-popover-item tb-popover-item-${alert.kind}`}>
+                          <span>{alert.icon}</span>
+                          <span>{typeof alert.content === "string" ? alert.content : "Notification de l'espace admin."}</span>
+                          <button type="button" className="tb-popover-close" onClick={() => removeAlert(alert.id)}>
+                            ✕
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <div className="tb-menu-wrap" ref={exportWrapRef}>
+              <button
+                type="button"
+                className="tb-btn"
+                title="Exporter"
+                onClick={() => {
+                  setExportOpen((previous) => !previous);
+                  setNotifOpen(false);
+                }}
+              >
+                📤
+              </button>
+              {exportOpen ? (
+                <div className="tb-popover tb-popover-export" role="dialog" aria-label="Menu export admin">
+                  <div className="tb-popover-head">
+                    <strong>Exporter</strong>
+                  </div>
+                  <div className="tb-export-actions">
+                    <button type="button" className="tb-export-btn" onClick={() => handleQuickExport("csv")}>
+                      Export CSV
+                    </button>
+                    <button type="button" className="tb-export-btn" onClick={() => handleQuickExport("json")}>
+                      Export JSON
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
               className="tb-new"
               onClick={() => setModalOpen(true)}
             >
               ＋ Nouveau
+            </button>
+            <button type="button" className="tb-new" title="Déconnexion admin" onClick={() => void logout()}>
+              Déconnexion
             </button>
           </div>
         </header>
@@ -785,6 +953,9 @@ export function NoyaDashboard() {
               setProjectsSection(s);
             }}
           />
+          <div className={`page${page === "blog" ? " active" : ""}`} id="page-blog">
+            <BlogPostsManager />
+          </div>
           <HrPage
             active={page === "hr"}
             section={hrSection}

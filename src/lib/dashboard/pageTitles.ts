@@ -5,6 +5,7 @@ export const DASHBOARD_PAGE_TITLES: Record<DashboardPageId, string> = {
   finance: "Finance & Comptabilité",
   crm: "CRM & Clients",
   projects: "Gestion des Projets",
+  blog: "Gestion Blog",
   hr: "Ressources Humaines",
   stock: "Stock & Achats",
   comms: "Communications",

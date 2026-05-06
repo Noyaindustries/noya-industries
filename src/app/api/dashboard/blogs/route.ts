@@ -76,14 +76,16 @@ export async function GET() {
       console.warn("[api/dashboard/blogs][GET] Prisma client unavailable, using fallback posts.");
       return NextResponse.json({ posts: FALLBACK_BLOG_POSTS });
     }
-    const posts = await prisma.blogPost.findMany({ orderBy: { order: "asc" } });
+    const posts = await prisma.blogPost.findMany();
     if (posts.length === 0) {
       return NextResponse.json({ posts: FALLBACK_BLOG_POSTS });
     }
-    const normalizedPosts = posts.map((post) => ({
-      ...post,
-      content: normalizePostContent(post.content),
-    }));
+    const normalizedPosts = posts
+      .map((post) => ({
+        ...post,
+        content: normalizePostContent(post.content),
+      }))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     return NextResponse.json({ posts: normalizedPosts });
   } catch (error) {
     console.error("[api/dashboard/blogs][GET] Prisma query failed, using fallback posts.", error);

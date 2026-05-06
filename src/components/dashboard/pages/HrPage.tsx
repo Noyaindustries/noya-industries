@@ -1,6 +1,8 @@
 "use client";
 
 import type { HrSectionId } from "@/lib/dashboard/hrNav";
+import { TeamMembersManager } from "@/components/dashboard/team/TeamMembersManager";
+import { useState } from "react";
 
 type HrPageProps = {
   active: boolean;
@@ -8,123 +10,6 @@ type HrPageProps = {
   onHrNavigate?: (s: HrSectionId) => void;
 };
 
-const RECRUITMENT_URL =
-  process.env.NEXT_PUBLIC_NOYA_RECRUTEMENT_URL ?? "/recrutement#travailler-avec-nous";
-
-function TeamList() {
-  return (
-    <div className="emp-list">
-      <div className="emp-item">
-        <div
-          className="emp-av"
-          style={{
-            background: "linear-gradient(135deg,var(--gold),var(--cobalt))",
-          }}
-        >
-          YN
-        </div>
-        <div className="emp-info">
-          <div className="emp-name">Yannick N&apos;guessan</div>
-          <div className="emp-role">Directeur Général · CDI</div>
-        </div>
-        <div className="emp-status" style={{ background: "#4ADE80" }} />
-        <div className="emp-hours" style={{ marginLeft: 8 }}>
-          En ligne
-        </div>
-      </div>
-      <div className="emp-item">
-        <div
-          className="emp-av"
-          style={{
-            background: "linear-gradient(135deg,var(--cobalt),#7C3AED)",
-          }}
-        >
-          JL
-        </div>
-        <div className="emp-info">
-          <div className="emp-name">Jean-Loïc Koné</div>
-          <div className="emp-role">Directeur Créatif · CDI</div>
-        </div>
-        <div className="emp-status" style={{ background: "#4ADE80" }} />
-        <div className="emp-hours" style={{ marginLeft: 8 }}>
-          En ligne
-        </div>
-      </div>
-      <div className="emp-item">
-        <div
-          className="emp-av"
-          style={{
-            background: "linear-gradient(135deg,#10B981,var(--cobalt))",
-          }}
-        >
-          KS
-        </div>
-        <div className="emp-info">
-          <div className="emp-name">Kouassi Stéphane</div>
-          <div className="emp-role">Ingénieur Fullstack · Prestataire</div>
-        </div>
-        <div className="emp-status" style={{ background: "#4ADE80" }} />
-        <div className="emp-hours" style={{ marginLeft: 8 }}>
-          En ligne
-        </div>
-      </div>
-      <div className="emp-item">
-        <div
-          className="emp-av"
-          style={{
-            background: "linear-gradient(135deg,#F59E0B,#EF4444)",
-          }}
-        >
-          AT
-        </div>
-        <div className="emp-info">
-          <div className="emp-name">Aminata Touré</div>
-          <div className="emp-role">Chargée de Projets · Prestataire</div>
-        </div>
-        <div className="emp-status" style={{ background: "#FCD34D" }} />
-        <div className="emp-hours" style={{ marginLeft: 8 }}>
-          Télétravail
-        </div>
-      </div>
-      <div className="emp-item">
-        <div
-          className="emp-av"
-          style={{
-            background: "linear-gradient(135deg,#8B5CF6,#EC4899)",
-          }}
-        >
-          SK
-        </div>
-        <div className="emp-info">
-          <div className="emp-name">Stéphane Konan</div>
-          <div className="emp-role">Consultant Senior · CDI</div>
-        </div>
-        <div className="emp-status" style={{ background: "#4ADE80" }} />
-        <div className="emp-hours" style={{ marginLeft: 8 }}>
-          Sur site client
-        </div>
-      </div>
-      <div className="emp-item">
-        <div
-          className="emp-av"
-          style={{
-            background: "linear-gradient(135deg,#059669,#0D9488)",
-          }}
-        >
-          MB
-        </div>
-        <div className="emp-info">
-          <div className="emp-name">Mariama Baldé</div>
-          <div className="emp-role">Formatrice Academy · Prestataire</div>
-        </div>
-        <div className="emp-status" style={{ background: "#6B7280" }} />
-        <div className="emp-hours" style={{ marginLeft: 8 }}>
-          Congé
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function WorkloadBars() {
   return (
@@ -262,8 +147,23 @@ function LeaveRequestsTable() {
 }
 
 export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
+  const [openCreateKey, setOpenCreateKey] = useState(0);
+
   return (
     <div className={`page${active ? " active" : ""}`} id="page-hr">
+      <div className="hr-team-add-cta blog-more">
+        <button
+          type="button"
+          className="btn-hero"
+          onClick={() => {
+            onHrNavigate?.("team");
+            setOpenCreateKey((value) => value + 1);
+          }}
+        >
+          Ajouter un membre
+        </button>
+      </div>
+
       <div className="kpi-row">
         <div className="kpi gold">
           <div className="kpi-label">Effectif total</div>
@@ -374,26 +274,7 @@ export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
       ) : null}
 
       {section === "team" ? (
-        <div className="card">
-          <div className="card-head">
-            <div>
-              <div className="card-title">👤 Équipe Noya Industries</div>
-              <div className="card-sub">Statuts & disponibilité</div>
-            </div>
-            <div className="card-actions">
-              <button
-                type="button"
-                className="ca-btn primary"
-                onClick={() => {
-                  window.location.href = RECRUITMENT_URL;
-                }}
-              >
-                ＋ Ajouter
-              </button>
-            </div>
-          </div>
-          <TeamList />
-        </div>
+        <TeamMembersManager openCreateKey={openCreateKey} />
       ) : null}
 
       {section === "workload" ? (
@@ -422,7 +303,7 @@ export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
                 type="button"
                 className="ca-btn primary"
                 onClick={() => {
-                  window.location.href = RECRUITMENT_URL;
+                  onHrNavigate?.("team");
                 }}
               >
                 Nouvelle demande

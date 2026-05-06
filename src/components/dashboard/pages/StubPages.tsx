@@ -32,6 +32,31 @@ type SettingsPageProps = {
   onSettingsNavigate?: (s: SettingsSectionId) => void;
 };
 
+type AccountSettingsForm = {
+  companyName: string;
+  legalName: string;
+  email: string;
+  phone: string;
+  website: string;
+  city: string;
+  address: string;
+};
+
+type SecuritySettingsForm = {
+  twoFactorEnabled: boolean;
+  loginAlerts: boolean;
+  sessionTimeoutEnabled: boolean;
+  passwordRotationDays: "30" | "60" | "90";
+};
+
+type SecuritySession = {
+  id: string;
+  device: string;
+  location: string;
+  lastSeen: string;
+  status: "active" | "idle";
+};
+
 type StockSkuRow = {
   ref: string;
   label: string;
@@ -96,6 +121,29 @@ const ACADEMY_PROGRAM_ROWS = [
     pct: 100,
     next: "Terminé",
   },
+];
+
+const INITIAL_ACCOUNT_SETTINGS: AccountSettingsForm = {
+  companyName: "Noya Industries",
+  legalName: "Noya Industries SARL",
+  email: "contact@noya.ci",
+  phone: "+225 07 00 00 00 00",
+  website: "https://noya.ci",
+  city: "Abidjan",
+  address: "Cocody, Abidjan, Côte d'Ivoire",
+};
+
+const INITIAL_SECURITY_SETTINGS: SecuritySettingsForm = {
+  twoFactorEnabled: false,
+  loginAlerts: true,
+  sessionTimeoutEnabled: true,
+  passwordRotationDays: "90",
+};
+
+const INITIAL_SECURITY_SESSIONS: SecuritySession[] = [
+  { id: "sess-1", device: "Chrome · Windows", location: "Abidjan, CI", lastSeen: "Maintenant", status: "active" },
+  { id: "sess-2", device: "Safari · iPhone", location: "Abidjan, CI", lastSeen: "Il y a 22 min", status: "idle" },
+  { id: "sess-3", device: "Edge · Windows", location: "Yamoussoukro, CI", lastSeen: "Hier, 18:42", status: "idle" },
 ];
 
 function academyProgramTypeLabel(
@@ -869,6 +917,29 @@ export function SettingsPage({
   section,
   onSettingsNavigate,
 }: SettingsPageProps) {
+  const { pushToast } = useDashboardUi();
+  const [accountForm, setAccountForm] = useState<AccountSettingsForm>(INITIAL_ACCOUNT_SETTINGS);
+  const [securityForm, setSecurityForm] = useState<SecuritySettingsForm>(INITIAL_SECURITY_SETTINGS);
+  const [securitySessions, setSecuritySessions] = useState<SecuritySession[]>(INITIAL_SECURITY_SESSIONS);
+
+  function saveAccountSettings() {
+    pushToast("Informations du compte enregistrées.");
+  }
+
+  function saveSecuritySettings() {
+    pushToast("Paramètres de sécurité enregistrés.");
+  }
+
+  function revokeSession(sessionId: string) {
+    setSecuritySessions((previous) => previous.filter((session) => session.id !== sessionId));
+    pushToast("Session révoquée.");
+  }
+
+  function revokeAllOtherSessions() {
+    setSecuritySessions((previous) => previous.filter((session) => session.status === "active"));
+    pushToast("Toutes les autres sessions ont été fermées.");
+  }
+
   return (
     <div className={`page${active ? " active" : ""}`} id="page-settings">
       {section === "overview" ? (
@@ -920,31 +991,169 @@ export function SettingsPage({
               <div className="card-sub">Profil organisation</div>
             </div>
           </div>
-          <div className="card-body db-stub">
-            <div className="db-stub-title">Profil & branding</div>
-            <div className="db-stub-desc">
-              Logo, raison sociale, mentions légales et coordonnées de facturation.
+          <div className="card-body">
+            <div className="blog-form-grid">
+              <label className="blog-field">
+                <span>Nom commercial</span>
+                <input value={accountForm.companyName} onChange={(e) => setAccountForm((prev) => ({ ...prev, companyName: e.target.value }))} />
+              </label>
+              <label className="blog-field">
+                <span>Raison sociale</span>
+                <input value={accountForm.legalName} onChange={(e) => setAccountForm((prev) => ({ ...prev, legalName: e.target.value }))} />
+              </label>
+              <label className="blog-field">
+                <span>Email principal</span>
+                <input type="email" value={accountForm.email} onChange={(e) => setAccountForm((prev) => ({ ...prev, email: e.target.value }))} />
+              </label>
+              <label className="blog-field">
+                <span>Téléphone</span>
+                <input value={accountForm.phone} onChange={(e) => setAccountForm((prev) => ({ ...prev, phone: e.target.value }))} />
+              </label>
+              <label className="blog-field">
+                <span>Site web</span>
+                <input value={accountForm.website} onChange={(e) => setAccountForm((prev) => ({ ...prev, website: e.target.value }))} />
+              </label>
+              <label className="blog-field">
+                <span>Ville</span>
+                <input value={accountForm.city} onChange={(e) => setAccountForm((prev) => ({ ...prev, city: e.target.value }))} />
+              </label>
+              <label className="blog-field blog-field-full">
+                <span>Adresse</span>
+                <input value={accountForm.address} onChange={(e) => setAccountForm((prev) => ({ ...prev, address: e.target.value }))} />
+              </label>
+            </div>
+            <div className="blog-more blog-form-actions settings-account-actions">
+              <button type="button" className="btn-hero blog-form-primary" onClick={saveAccountSettings}>
+                Enregistrer le compte
+              </button>
             </div>
           </div>
         </div>
       ) : null}
 
       {section === "security" ? (
-        <div className="card">
-          <div className="card-head">
-            <div>
-              <div className="card-title">🔐 Sécurité</div>
+        <div className="grid-2">
+          <div className="card">
+            <div className="card-head">
+              <div>
+                <div className="card-title">🔐 Sécurité du compte</div>
+                <div className="card-sub">Protection des accès administrateur</div>
+              </div>
+            </div>
+            <div className="card-body">
+              <div className="blog-form-grid">
+                <label className="blog-toggle">
+                  <input
+                    type="checkbox"
+                    checked={securityForm.twoFactorEnabled}
+                    onChange={(event) =>
+                      setSecurityForm((previous) => ({
+                        ...previous,
+                        twoFactorEnabled: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>Activer la double authentification (2FA)</span>
+                </label>
+                <label className="blog-toggle">
+                  <input
+                    type="checkbox"
+                    checked={securityForm.loginAlerts}
+                    onChange={(event) =>
+                      setSecurityForm((previous) => ({
+                        ...previous,
+                        loginAlerts: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>Recevoir des alertes de connexion</span>
+                </label>
+                <label className="blog-toggle blog-field-full">
+                  <input
+                    type="checkbox"
+                    checked={securityForm.sessionTimeoutEnabled}
+                    onChange={(event) =>
+                      setSecurityForm((previous) => ({
+                        ...previous,
+                        sessionTimeoutEnabled: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>Expiration automatique des sessions inactives</span>
+                </label>
+                <label className="blog-field blog-field-full">
+                  <span>Rotation mot de passe admin</span>
+                  <select
+                    value={securityForm.passwordRotationDays}
+                    onChange={(event) =>
+                      setSecurityForm((previous) => ({
+                        ...previous,
+                        passwordRotationDays: event.target.value as SecuritySettingsForm["passwordRotationDays"],
+                      }))
+                    }
+                  >
+                    <option value="30">Tous les 30 jours</option>
+                    <option value="60">Tous les 60 jours</option>
+                    <option value="90">Tous les 90 jours</option>
+                  </select>
+                </label>
+              </div>
+              <div className="blog-more blog-form-actions settings-account-actions">
+                <button type="button" className="btn-hero blog-form-primary" onClick={saveSecuritySettings}>
+                  Enregistrer la sécurité
+                </button>
+              </div>
             </div>
           </div>
-          <div className="card-body">
-            <ul className="crm-prio-list">
-              <li>
-                Authentification à deux facteurs —{" "}
-                <span className="badge g">Recommandé</span>
-              </li>
-              <li>Sessions actives — 3 appareils</li>
-              <li>Journal d&apos;audit — rétention 90 j.</li>
-            </ul>
+
+          <div className="card">
+            <div className="card-head">
+              <div>
+                <div className="card-title">🧾 Sessions actives</div>
+                <div className="card-sub">Appareils connectés au compte admin</div>
+              </div>
+              <div className="card-actions">
+                <button type="button" className="ca-btn" onClick={revokeAllOtherSessions}>
+                  Fermer les autres sessions
+                </button>
+              </div>
+            </div>
+            <div className="card-table-wrap">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Appareil</th>
+                    <th>Localisation</th>
+                    <th>Dernière activité</th>
+                    <th>Statut</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {securitySessions.map((session) => (
+                    <tr key={session.id}>
+                      <td className="bold">{session.device}</td>
+                      <td>{session.location}</td>
+                      <td>{session.lastSeen}</td>
+                      <td>
+                        <span className={`badge ${session.status === "active" ? "g" : "y"}`}>
+                          {session.status === "active" ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td>
+                        {session.status === "active" ? (
+                          <span className="badge b">Session courante</span>
+                        ) : (
+                          <button type="button" className="ca-btn" onClick={() => revokeSession(session.id)}>
+                            Révoquer
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ) : null}
