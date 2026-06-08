@@ -34,7 +34,121 @@ model ContactMessage {
   phone     String?
   topic     String?
   message   String
+  status    String   @default("new")
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CrmClient {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String   @unique
+  name        String
+  sector      String
+  pole        String
+  value       Int
+  contactDate String
+  status      String
+  initials    String
+  avBg        String
+  avColor     String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CrmActivity {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  clientName String
+  type       String
+  dateLabel  String
+  status     String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model MissionProject {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug           String   @unique
+  name           String
+  client         String
+  ownerInitials  String
+  ownerBg        String
+  ownerColor     String?
+  deadline       String
+  deadlineWarn   Boolean  @default(false)
+  progress       Int
+  barColor       String
+  status         String
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model FinanceInvoice {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  number     String   @unique
+  client     String
+  mission    String
+  dateLabel  String
+  dueLabel   String
+  amount     Int
+  amountTone String   @default("gold")
+  status     String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model StockItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  ref         String   @unique
+  label       String
+  category    String
+  quantity    Int
+  price       Int
+  minQuantity Int      @default(5)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AcademyProgram {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String   @unique
+  name        String
+  type        String
+  learners    Int
+  progress    Int
+  nextSession String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LeaveRequest {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  employeeName  String
+  periodLabel   String
+  durationLabel String
+  reason        String
+  status        String
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CommsTemplate {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug      String   @unique
+  name      String
+  channel   String
+  subject   String
+  body      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model BlogPost {

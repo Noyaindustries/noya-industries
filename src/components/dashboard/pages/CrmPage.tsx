@@ -4,6 +4,8 @@ import type { CrmSectionId } from "@/lib/dashboard/crmNav";
 import { downloadCsv } from "@/lib/dashboard/downloadCsv";
 import { matchesSearch } from "@/lib/dashboard/textSearch";
 import { useDashboardUi } from "../dashboardUiContext";
+import { formatFcfa } from "@/lib/dashboard/module-fallbacks";
+import { useDashboardModule } from "@/hooks/useDashboardModule";
 import { useMemo, useState } from "react";
 
 type CrmPageProps = {
@@ -361,7 +363,17 @@ function PipelineBoard() {
   );
 }
 
-function ActivitiesPanel() {
+function ActivitiesPanel({
+  activities,
+}: {
+  activities: { title: string; clientName: string; type: string; dateLabel: string; status: string }[];
+}) {
+  const dotColor = (type: string) => {
+    if (type === "call") return "var(--gold)";
+    if (type === "email") return "var(--cobalt2)";
+    return "var(--green)";
+  };
+
   return (
     <div className="grid-2 crm-activities-grid">
       <div className="card">
@@ -373,38 +385,19 @@ function ActivitiesPanel() {
         </div>
         <div className="card-body">
           <div className="activity">
-            <div className="act-item">
-              <span className="act-dot" style={{ color: "var(--gold)" }} />
-              <div className="act-text">
-                <strong>LONACI</strong> — Compte-rendu négociation phase 2
-                envoyé au CFO.
-              </div>
-              <div className="act-time">Auj. 09:40</div>
-            </div>
-            <div className="act-item">
-              <span className="act-dot" style={{ color: "var(--cobalt2)" }} />
-              <div className="act-text">
-                <strong>Cabinet Diomandé</strong> — Relance facture F-2026-047
-                (template juridique).
-              </div>
-              <div className="act-time">Hier</div>
-            </div>
-            <div className="act-item">
-              <span className="act-dot" style={{ color: "var(--green)" }} />
-              <div className="act-text">
-                <strong>Sté Coulibaly</strong> — Paiement confirmé · Merci
-                envoyé.
-              </div>
-              <div className="act-time">Hier</div>
-            </div>
-            <div className="act-item">
-              <span className="act-dot" style={{ color: "var(--purple)" }} />
-              <div className="act-text">
-                <strong>Groupe Ouattara</strong> — Point hebdo Community ·
-                action items 4.
-              </div>
-              <div className="act-time">02 Avr</div>
-            </div>
+            {activities.length === 0 ? (
+              <p className="db-stub-desc">Aucune activité enregistrée.</p>
+            ) : (
+              activities.map((act) => (
+                <div key={`${act.clientName}-${act.title}`} className="act-item">
+                  <span className="act-dot" style={{ color: dotColor(act.type) }} />
+                  <div className="act-text">
+                    <strong>{act.clientName}</strong> — {act.title}
+                  </div>
+                  <div className="act-time">{act.dateLabel}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -469,28 +462,80 @@ function filterClientRows(
   });
 }
 
+type CrmApiClient = {
+  name: string;
+  sector: string;
+  pole: string;
+  value: number;
+  contactDate: string;
+  status: string;
+  initials: string;
+  avBg: string;
+  avColor?: string | null;
+};
+
 export function CrmPage({ active, section, onCrmNavigate }: CrmPageProps) {
   const { globalSearch, pushToast } = useDashboardUi();
   const [accountQuery, setAccountQuery] = useState("");
   const [accountSectorFilter, setAccountSectorFilter] = useState<string>("all");
+  const { data: crmData, reload } = useDashboardModule<{
+    clients: CrmApiClient[];
+    activities: { title: string; clientName: string; type: string; dateLabel: string; status: string }[];
+  }>("/api/dashboard/crm", active);
+
+  const clients = useMemo((): ClientRow[] => {
+    const rows = crmData?.clients ?? [];
+    return rows.map((c) => ({
+      initials: c.initials,
+      name: c.name,
+      sector: c.sector,
+      pole: c.pole === "tech" ? "tech" : "consulting",
+      value: formatFcfa(c.value),
+      contact: c.contactDate,
+      status: c.status === "relance" || c.status === "retard" ? c.status : "actif",
+      avBg: c.avBg,
+      avColor: c.avColor ?? undefined,
+    }));
+  }, [crmData]);
+
+  const pipelineTotal = useMemo(
+    () => (crmData?.clients ?? []).reduce((sum, c) => sum + c.value, 0),
+    [crmData],
+  );
 
   const sectorOrder = useMemo(() => {
-    const sectors = Array.from(new Set(CLIENTS.map((c) => c.sector)));
+    const sectors = Array.from(new Set(clients.map((c) => c.sector)));
     return ["all", ...sectors];
-  }, []);
+  }, [clients]);
 
   const filteredClients = useMemo(
     () => {
       const bySearch = filterClientRows(
-        CLIENTS,
+        clients,
         section === "accounts" ? accountQuery : "",
         globalSearch,
       );
       if (accountSectorFilter === "all") return bySearch;
       return bySearch.filter((row) => row.sector === accountSectorFilter);
     },
-    [section, accountQuery, globalSearch, accountSectorFilter],
+    [clients, section, accountQuery, globalSearch, accountSectorFilter],
   );
+
+  async function addClient() {
+    const name = window.prompt("Nom du client ?");
+    if (!name?.trim()) return;
+    const response = await fetch("/api/dashboard/crm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), sector: "Autre", value: 0 }),
+    });
+    if (!response.ok) {
+      pushToast("Impossible d'ajouter le client.");
+      return;
+    }
+    pushToast("Client ajouté au CRM.");
+    void reload();
+  }
 
   const cycleSectorFilter = () => {
     const idx = sectorOrder.indexOf(accountSectorFilter);
@@ -502,18 +547,18 @@ export function CrmPage({ active, section, onCrmNavigate }: CrmPageProps) {
       <div className="kpi-row">
         <div className="kpi gold">
           <div className="kpi-label">Total clients</div>
-          <div className="kpi-val">148</div>
-          <div className="kpi-delta up">▲ +12 ce trimestre</div>
+          <div className="kpi-val">{clients.length}</div>
+          <div className="kpi-delta up">▲ Portefeuille CRM</div>
         </div>
         <div className="kpi green">
           <div className="kpi-label">Clients actifs</div>
-          <div className="kpi-val">89</div>
-          <div className="kpi-delta up">▲ 60% du portefeuille</div>
+          <div className="kpi-val">{clients.filter((c) => c.status === "actif").length}</div>
+          <div className="kpi-delta up">▲ Comptes suivis</div>
         </div>
         <div className="kpi blue">
           <div className="kpi-label">Pipeline devis</div>
-          <div className="kpi-val">2.1M</div>
-          <div className="kpi-delta neutral">● 8 propositions</div>
+          <div className="kpi-val">{Math.round(pipelineTotal / 1_000_000).toFixed(1)}M</div>
+          <div className="kpi-delta neutral">● FCFA cumulés</div>
         </div>
         <div className="kpi purple">
           <div className="kpi-label">Taux conversion</div>
@@ -628,8 +673,8 @@ export function CrmPage({ active, section, onCrmNavigate }: CrmPageProps) {
               </div>
             </div>
             <div className="card-actions">
-              <button type="button" className="ca-btn primary">
-                ＋ Opportunité
+              <button type="button" className="ca-btn primary" onClick={() => void addClient()}>
+                ＋ Nouveau client
               </button>
             </div>
           </div>
@@ -678,7 +723,9 @@ export function CrmPage({ active, section, onCrmNavigate }: CrmPageProps) {
         </div>
       ) : null}
 
-      {section === "activities" ? <ActivitiesPanel /> : null}
+      {section === "activities" ? (
+        <ActivitiesPanel activities={crmData?.activities ?? []} />
+      ) : null}
     </div>
   );
 }

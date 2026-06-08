@@ -2,7 +2,9 @@
 
 import type { HrSectionId } from "@/lib/dashboard/hrNav";
 import { TeamMembersManager } from "@/components/dashboard/team/TeamMembersManager";
-import { useState } from "react";
+import { useDashboardModule } from "@/hooks/useDashboardModule";
+import { useDashboardUi } from "../dashboardUiContext";
+import { useEffect, useState } from "react";
 
 type HrPageProps = {
   active: boolean;
@@ -78,7 +80,28 @@ function WorkloadBars() {
   );
 }
 
-function LeaveRequestsTable() {
+type LeaveRow = {
+  id: string;
+  employeeName: string;
+  periodLabel: string;
+  durationLabel: string;
+  reason: string;
+  status: string;
+};
+
+function leaveStatusBadge(status: string) {
+  if (status === "approved") return <span className="badge g">Approuvé</span>;
+  if (status === "pending") return <span className="badge y">En attente</span>;
+  return <span className="badge b">Examiné</span>;
+}
+
+function LeaveRequestsTable({
+  leaves,
+  onApprove,
+}: {
+  leaves: LeaveRow[];
+  onApprove?: (id: string) => void;
+}) {
   return (
     <div className="card-table-wrap">
       <table className="tbl">
@@ -89,57 +112,34 @@ function LeaveRequestsTable() {
             <th>Durée</th>
             <th>Motif</th>
             <th>Statut</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Mariama Baldé</td>
-            <td
-              style={{
-                fontFamily: "var(--font-dm-mono), monospace",
-                fontSize: 10.5,
-              }}
-            >
-              07-12 Avr
-            </td>
-            <td>5 jours</td>
-            <td>Congé annuel</td>
-            <td>
-              <span className="badge g">Approuvé</span>
-            </td>
-          </tr>
-          <tr>
-            <td>Aminata Touré</td>
-            <td
-              style={{
-                fontFamily: "var(--font-dm-mono), monospace",
-                fontSize: 10.5,
-              }}
-            >
-              18-19 Avr
-            </td>
-            <td>2 jours</td>
-            <td>Personnel</td>
-            <td>
-              <span className="badge y">En attente</span>
-            </td>
-          </tr>
-          <tr>
-            <td>Stéphane Konan</td>
-            <td
-              style={{
-                fontFamily: "var(--font-dm-mono), monospace",
-                fontSize: 10.5,
-              }}
-            >
-              28 Avr - 02 Mai
-            </td>
-            <td>5 jours</td>
-            <td>Formation</td>
-            <td>
-              <span className="badge b">Examiné</span>
-            </td>
-          </tr>
+          {leaves.length === 0 ? (
+            <tr>
+              <td colSpan={6}>Aucune demande de congé.</td>
+            </tr>
+          ) : (
+            leaves.map((row) => (
+              <tr key={row.id}>
+                <td className="bold">{row.employeeName}</td>
+                <td style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 10.5 }}>
+                  {row.periodLabel}
+                </td>
+                <td>{row.durationLabel}</td>
+                <td>{row.reason}</td>
+                <td>{leaveStatusBadge(row.status)}</td>
+                <td>
+                  {row.status === "pending" && onApprove ? (
+                    <button type="button" className="ca-btn" onClick={() => onApprove(row.id)}>
+                      Approuver
+                    </button>
+                  ) : null}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
@@ -148,6 +148,57 @@ function LeaveRequestsTable() {
 
 export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
   const [openCreateKey, setOpenCreateKey] = useState(0);
+  const [teamCount, setTeamCount] = useState(0);
+  const { pushToast } = useDashboardUi();
+  const { data: leavesData, reload: reloadLeaves } = useDashboardModule<{ leaves: LeaveRow[] }>(
+    "/api/dashboard/hr/leaves",
+    active,
+  );
+
+  const leaves = leavesData?.leaves ?? [];
+
+  useEffect(() => {
+    if (!active) return;
+    void fetch("/api/dashboard/team", { cache: "no-store" })
+      .then(async (r) => r.json())
+      .then((d: { members?: unknown[] }) => setTeamCount(d.members?.length ?? 0))
+      .catch(() => setTeamCount(0));
+  }, [active]);
+
+  async function addLeaveRequest() {
+    const employeeName = window.prompt("Nom de l'employé ?");
+    if (!employeeName?.trim()) return;
+    const response = await fetch("/api/dashboard/hr/leaves", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        employeeName: employeeName.trim(),
+        periodLabel: window.prompt("Période ?") ?? "—",
+        durationLabel: window.prompt("Durée ?") ?? "—",
+        reason: window.prompt("Motif ?") ?? "Congé",
+      }),
+    });
+    if (!response.ok) {
+      pushToast("Impossible d'enregistrer la demande.");
+      return;
+    }
+    pushToast("Demande de congé enregistrée.");
+    void reloadLeaves();
+  }
+
+  async function approveLeave(id: string) {
+    const response = await fetch("/api/dashboard/hr/leaves", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "approved" }),
+    });
+    if (!response.ok) {
+      pushToast("Validation impossible.");
+      return;
+    }
+    pushToast("Congé approuvé.");
+    void reloadLeaves();
+  }
 
   return (
     <div className={`page${active ? " active" : ""}`} id="page-hr">
@@ -167,8 +218,8 @@ export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
       <div className="kpi-row">
         <div className="kpi gold">
           <div className="kpi-label">Effectif total</div>
-          <div className="kpi-val">8</div>
-          <div className="kpi-delta neutral">● 3 CDI + 5 Prestataires</div>
+          <div className="kpi-val">{teamCount}</div>
+          <div className="kpi-delta neutral">● Équipe publiée</div>
         </div>
         <div className="kpi green">
           <div className="kpi-label">Présents aujourd&apos;hui</div>
@@ -182,8 +233,8 @@ export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
         </div>
         <div className="kpi purple">
           <div className="kpi-label">Congés en cours</div>
-          <div className="kpi-val">1</div>
-          <div className="kpi-delta neutral">● 3 demandes</div>
+          <div className="kpi-val">{leaves.filter((l) => l.status === "approved").length}</div>
+          <div className="kpi-delta neutral">● {leaves.length} demandes</div>
         </div>
       </div>
 
@@ -268,7 +319,7 @@ export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
                 <div className="card-sub">Demandes récentes</div>
               </div>
             </div>
-            <LeaveRequestsTable />
+            <LeaveRequestsTable leaves={leaves} onApprove={(id) => void approveLeave(id)} />
           </div>
         </>
       ) : null}
@@ -299,18 +350,12 @@ export function HrPage({ active, section, onHrNavigate }: HrPageProps) {
               <div className="card-sub">Validation & historique court</div>
             </div>
             <div className="card-actions">
-              <button
-                type="button"
-                className="ca-btn primary"
-                onClick={() => {
-                  onHrNavigate?.("team");
-                }}
-              >
+              <button type="button" className="ca-btn primary" onClick={() => void addLeaveRequest()}>
                 Nouvelle demande
               </button>
             </div>
           </div>
-          <LeaveRequestsTable />
+          <LeaveRequestsTable leaves={leaves} onApprove={(id) => void approveLeave(id)} />
         </div>
       ) : null}
     </div>

@@ -52,66 +52,18 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LANDING_IMG } from "../landing/landingAssets";
 import { useDashboardUi } from "./dashboardUiContext";
-import type { DashboardAlert } from "./dashboardAlerts";
+import { mapOverviewAlerts, type DashboardAlert } from "./dashboardAlerts";
+import type { OverviewData } from "@/lib/dashboard/overview-data";
 import { BlogPostsManager } from "./blog/BlogPostsManager";
 import { CrmPage } from "./pages/CrmPage";
 import { FinancePage } from "./pages/FinancePage";
 import { HrPage } from "./pages/HrPage";
 import { OverviewPage } from "./pages/OverviewPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
-import {
-  AcademyPage,
-  CommsPage,
-  StockPage,
-} from "./pages/StubPages";
+import { AcademyPage } from "./pages/AcademyPage";
+import { CommsPage } from "./pages/CommsPage";
 import { SettingsPage } from "./pages/SettingsPage";
-
-const INITIAL_ALERTS: DashboardAlert[] = [
-  {
-    id: "a1",
-    kind: "warn",
-    icon: "⚠️",
-    content: (
-      <>
-        <strong>Facture N°2024-047</strong> — Cabinet Diomandé · Échéance
-        dépassée de 3 jours · 450 000 FCFA
-      </>
-    ),
-  },
-  {
-    id: "a2",
-    kind: "err",
-    icon: "🔴",
-    content: (
-      <>
-        <strong>Projet PRESENZ-012</strong> — Groupe Ouattara · Délai de
-        livraison dépassé · Action requise
-      </>
-    ),
-  },
-  {
-    id: "a3",
-    kind: "info",
-    icon: "📋",
-    content: (
-      <>
-        <strong>Audit Business</strong> — Ets Koffi & Frères · Rapport à
-        valider avant vendredi
-      </>
-    ),
-  },
-  {
-    id: "a4",
-    kind: "suc",
-    icon: "✅",
-    content: (
-      <>
-        <strong>Paiement reçu</strong> — Sté Coulibaly · 280 000 FCFA crédités
-        aujourd&apos;hui
-      </>
-    ),
-  },
-];
+import { StockPage } from "./pages/StockPage";
 
 type NavItem = {
   id: DashboardPageId;
@@ -134,6 +86,7 @@ const NAV_GROUPS: { section: string; items: NavItem[] }[] = [
     section: "Ressources",
     items: [
       { id: "hr", icon: "🏢", label: "RH & Équipe" },
+      { id: "stock", icon: "📦", label: "Stock & Logistique" },
       { id: "comms", icon: "✉️", label: "Communications", badge: { n: "5" } },
     ],
   },
@@ -249,10 +202,15 @@ export function NoyaDashboard() {
   const [settingsSection, setSettingsSection] =
     useState<SettingsSectionId>("overview");
   const [modalOpen, setModalOpen] = useState(false);
-  const [alerts, setAlerts] = useState<DashboardAlert[]>(INITIAL_ALERTS);
+  const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [dateStr, setDateStr] = useState("");
+  const [adminProfile, setAdminProfile] = useState<{
+    name: string;
+    email: string;
+    initials: string;
+  } | null>(null);
   const skipSectionPersist = useRef(true);
   const notifWrapRef = useRef<HTMLDivElement | null>(null);
   const exportWrapRef = useRef<HTMLDivElement | null>(null);
@@ -269,6 +227,40 @@ export function NoyaDashboard() {
         }),
       );
     });
+  }, []);
+
+  useEffect(() => {
+    void fetch("/api/dashboard/overview", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json()) as OverviewData;
+        if (data.alerts?.length) {
+          setAlerts(mapOverviewAlerts(data.alerts));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    void fetch("/api/dashboard/settings/profile", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          profile?: { name: string; email: string };
+        };
+        if (!data.profile) return;
+        const parts = data.profile.name
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0]?.toUpperCase() ?? "");
+        setAdminProfile({
+          name: data.profile.name,
+          email: data.profile.email,
+          initials: parts.join("") || "NI",
+        });
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -818,18 +810,26 @@ export function NoyaDashboard() {
             Gestion équipe
           </button>
           <div className="sb-user">
-            <div className="sb-av">YN</div>
+            <div className="sb-av">{adminProfile?.initials ?? "NI"}</div>
             <div>
-              <div className="sb-uname">Yannick N&apos;guessan</div>
-              <div className="sb-urole">Directeur Général</div>
+              <div className="sb-uname">{adminProfile?.name ?? "Administrateur Noya"}</div>
+              <div className="sb-urole">{adminProfile?.email ?? "Infinite Core"}</div>
             </div>
           </div>
         </div>
       </nav>
 
       <div className="main">
+        <div className="db-ambient" aria-hidden>
+          <div className="db-ambient-orb db-ambient-orb--gold" />
+          <div className="db-ambient-orb db-ambient-orb--blue" />
+        </div>
         <header className="topbar">
           <div className="tb-left">
+            <div className="db-status-pill" title="Plateforme opérationnelle">
+              <span className="db-status-dot" />
+              Système actif
+            </div>
             <h1 className="tb-title">{title}</h1>
             <div className="tb-date">{dateStr}</div>
           </div>

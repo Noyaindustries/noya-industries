@@ -33,7 +33,13 @@ export function KpiCount({
   );
 }
 
-export function KpiMillions({ active }: { active: boolean }) {
+export function KpiMillions({
+  active,
+  millions = 12.4,
+}: {
+  active: boolean;
+  millions?: number;
+}) {
   const [v, setV] = useState(0);
   useEffect(() => {
     if (!active) return;
@@ -43,10 +49,10 @@ export function KpiMillions({ active }: { active: boolean }) {
       if (start === null) start = ts;
       const p = Math.min((ts - start) / dur, 1);
       const e = 1 - (1 - p) ** 4;
-      setV(e * 12.4);
+      setV(e * millions);
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-  }, [active]);
+  }, [active, millions]);
   return <>{v.toFixed(1)} M</>;
 }

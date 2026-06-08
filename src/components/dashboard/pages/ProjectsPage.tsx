@@ -4,6 +4,7 @@ import type { ProjectsSectionId } from "@/lib/dashboard/projectsNav";
 import { downloadCsv } from "@/lib/dashboard/downloadCsv";
 import { matchesSearch } from "@/lib/dashboard/textSearch";
 import { useDashboardUi } from "../dashboardUiContext";
+import { useDashboardModule } from "@/hooks/useDashboardModule";
 import { useMemo, useState } from "react";
 
 type ProjectsPageProps = {
@@ -121,6 +122,7 @@ function ProjectsTable({
   statusFilter,
   onStatusFilterClick,
   onExportClick,
+  onAddProject,
 }: {
   rows: ProjectRow[];
   showToolbar?: boolean;
@@ -129,6 +131,7 @@ function ProjectsTable({
   statusFilter?: ProjectStatusFilter;
   onStatusFilterClick?: () => void;
   onExportClick?: () => void;
+  onAddProject?: () => void;
 }) {
   const { pushToast } = useDashboardUi();
   return (
@@ -161,9 +164,7 @@ function ProjectsTable({
             <button
               type="button"
               className="ca-btn primary"
-              onClick={() =>
-                pushToast("Nouveau projet (démo) — formulaire à brancher")
-              }
+              onClick={() => onAddProject?.()}
             >
               ＋ Nouveau projet
             </button>
@@ -343,6 +344,19 @@ function RisksBlock() {
   );
 }
 
+type ProjectApiRow = {
+  name: string;
+  client: string;
+  ownerInitials: string;
+  ownerBg: string;
+  ownerColor?: string | null;
+  deadline: string;
+  deadlineWarn: boolean;
+  progress: number;
+  barColor: string;
+  status: string;
+};
+
 export function ProjectsPage({
   active,
   section,
@@ -352,19 +366,56 @@ export function ProjectsPage({
   const [projectQuery, setProjectQuery] = useState("");
   const [projectStatusFilter, setProjectStatusFilter] =
     useState<ProjectStatusFilter>("all");
+  const { data: projectsData, reload } = useDashboardModule<{ projects: ProjectApiRow[] }>(
+    "/api/dashboard/projects",
+    active,
+  );
+
+  const projects = useMemo((): ProjectRow[] => {
+    if (!projectsData?.projects) return PROJECTS;
+    return projectsData.projects.map((p) => ({
+      name: p.name,
+      client: p.client,
+      owner: { initials: p.ownerInitials, bg: p.ownerBg, color: p.ownerColor ?? undefined },
+      deadline: p.deadline,
+      deadlineWarn: p.deadlineWarn,
+      pct: p.progress,
+      barColor: p.barColor,
+      status: (["en_cours", "retard", "avance", "livre"].includes(p.status)
+        ? p.status
+        : "en_cours") as ProjectRow["status"],
+    }));
+  }, [projectsData]);
 
   const filteredProjects = useMemo(
     () => {
       const bySearch = filterProjectRows(
-        PROJECTS,
+        projects,
         section === "portfolio" ? projectQuery : "",
         globalSearch,
       );
       if (projectStatusFilter === "all") return bySearch;
       return bySearch.filter((row) => row.status === projectStatusFilter);
     },
-    [section, projectQuery, globalSearch, projectStatusFilter],
+    [projects, section, projectQuery, globalSearch, projectStatusFilter],
   );
+
+  async function addProject() {
+    const name = window.prompt("Nom du projet ?");
+    if (!name?.trim()) return;
+    const client = window.prompt("Client ?") ?? "—";
+    const response = await fetch("/api/dashboard/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), client }),
+    });
+    if (!response.ok) {
+      pushToast("Impossible de créer le projet.");
+      return;
+    }
+    pushToast("Projet ajouté au portefeuille.");
+    void reload();
+  }
 
   const cycleProjectStatusFilter = () => {
     const order: ProjectStatusFilter[] = [
@@ -383,8 +434,8 @@ export function ProjectsPage({
       <div className="kpi-row">
         <div className="kpi green">
           <div className="kpi-label">Projets actifs</div>
-          <div className="kpi-val">23</div>
-          <div className="kpi-delta neutral">● 4 pôles</div>
+          <div className="kpi-val">{projects.filter((p) => p.status !== "livre").length}</div>
+          <div className="kpi-delta neutral">● Portefeuille</div>
         </div>
         <div className="kpi gold">
           <div className="kpi-label">Taux complétion moy.</div>
@@ -535,6 +586,7 @@ export function ProjectsPage({
               );
               pushToast("Export CSV du portefeuille telecharge");
             }}
+            onAddProject={() => void addProject()}
           />
         </div>
       ) : null}

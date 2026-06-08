@@ -2,96 +2,27 @@
 
 import { drawDonut, drawRevChart } from "@/lib/dashboard/chartDrawers";
 import { downloadCsv } from "@/lib/dashboard/downloadCsv";
+import type { OverviewData, OverviewMissionDto } from "@/lib/dashboard/overview-data";
 import { matchesSearch } from "@/lib/dashboard/textSearch";
+import { useDashboardModule } from "@/hooks/useDashboardModule";
 import { useDashboardUi } from "../dashboardUiContext";
 import { useEffect, useMemo, useRef } from "react";
 import type { DashboardAlert } from "../dashboardAlerts";
 import { KpiCount, KpiMillions } from "../kpi";
 
-type MissionRow = {
-  initials: string;
-  client: string;
-  avBg: string;
-  avColor?: string;
-  mission: string;
-  pole: "consulting" | "tech" | "academy";
-  status: "livré" | "en_cours" | "jalon" | "retard" | "devis" | "planifié";
-  amount: string;
-  amountMuted?: boolean;
-};
-
-const MISSIONS: MissionRow[] = [
-  {
-    initials: "KF",
-    client: "Kofi & Frères",
-    avBg: "var(--gold)",
-    avColor: "#000",
-    mission: "Audit Rapide",
-    pole: "consulting",
-    status: "livré",
-    amount: "150K",
-  },
-  {
-    initials: "SC",
-    client: "Sté Coulibaly",
-    avBg: "var(--cobalt2)",
-    mission: "Audit Business",
-    pole: "consulting",
-    status: "en_cours",
-    amount: "280K",
-  },
-  {
-    initials: "CD",
-    client: "Cabinet Diomandé",
-    avBg: "var(--green)",
-    mission: "PRESENZ PRO",
-    pole: "tech",
-    status: "jalon",
-    amount: "95K",
-  },
-  {
-    initials: "GO",
-    client: "Grp. Ouattara",
-    avBg: "var(--purple)",
-    mission: "Community Mgmt",
-    pole: "consulting",
-    status: "retard",
-    amount: "120K",
-  },
-  {
-    initials: "AK",
-    client: "Awa Koné",
-    avBg: "#F59E0B",
-    mission: "Infinite Core",
-    pole: "tech",
-    status: "devis",
-    amount: "—",
-    amountMuted: true,
-  },
-  {
-    initials: "MT",
-    client: "Marc Touré",
-    avBg: "#059669",
-    mission: "Formation Digital",
-    pole: "academy",
-    status: "planifié",
-    amount: "75K",
-  },
-];
-
-function missionPoleBadge(p: MissionRow["pole"]) {
+function missionPoleBadge(p: OverviewMissionDto["pole"]) {
   if (p === "tech") return <span className="badge p">Tech</span>;
   if (p === "academy") return <span className="badge g">Academy</span>;
   return <span className="badge b">Consulting</span>;
 }
 
-function missionPoleText(p: MissionRow["pole"]): string {
+function missionPoleText(p: OverviewMissionDto["pole"]): string {
   if (p === "tech") return "Tech";
   if (p === "academy") return "Academy";
   return "Consulting";
 }
 
-function missionStatusBadge(s: MissionRow["status"]) {
+function missionStatusBadge(s: OverviewMissionDto["status"]) {
   if (s === "livré") return <span className="badge g">Livré</span>;
   if (s === "en_cours") return <span className="badge y">En cours</span>;
   if (s === "jalon") return <span className="badge y">J+8/15</span>;
@@ -100,7 +31,7 @@ function missionStatusBadge(s: MissionRow["status"]) {
   return <span className="badge g">Planifié</span>;
 }
 
-function missionStatusText(s: MissionRow["status"]): string {
+function missionStatusText(s: OverviewMissionDto["status"]): string {
   if (s === "livré") return "Livré";
   if (s === "en_cours") return "En cours";
   if (s === "jalon") return "J+8/15";
@@ -109,7 +40,7 @@ function missionStatusText(s: MissionRow["status"]): string {
   return "Planifié";
 }
 
-function filterMissions(rows: MissionRow[], globalQ: string): MissionRow[] {
+function filterMissions(rows: OverviewMissionDto[], globalQ: string): OverviewMissionDto[] {
   return rows.filter((m) =>
     matchesSearch(
       [
@@ -123,6 +54,12 @@ function filterMissions(rows: MissionRow[], globalQ: string): MissionRow[] {
       globalQ,
     ),
   );
+}
+
+function abbrevMillions(fcfa: number): string {
+  if (fcfa >= 1_000_000) return `${(fcfa / 1_000_000).toFixed(1)}M`;
+  if (fcfa >= 1_000) return `${Math.round(fcfa / 1_000)}K`;
+  return "0";
 }
 
 type OverviewPageProps = {
@@ -139,40 +76,84 @@ export function OverviewPage({
   onClearAlerts,
 }: OverviewPageProps) {
   const { globalSearch, pushToast } = useDashboardUi();
+  const { data } = useDashboardModule<OverviewData>("/api/dashboard/overview", active);
   const revenueRef = useRef<HTMLCanvasElement>(null);
   const donutRef = useRef<HTMLCanvasElement>(null);
 
+  const kpis = data?.kpis;
+  const missions = data?.missions ?? [];
+  const poles = data?.poles ?? [];
+  const activities = data?.activities ?? [];
+
   const filteredMissions = useMemo(
-    () => filterMissions(MISSIONS, globalSearch),
-    [globalSearch],
+    () => filterMissions(missions, globalSearch),
+    [missions, globalSearch],
   );
 
+  const chartRevenue = useMemo(
+    () =>
+      data?.revenueHistory.map((point) => ({
+        value: Math.round(point.value / 1000),
+        label: point.label,
+      })) ?? [],
+    [data?.revenueHistory],
+  );
+
+  const donutSegments = useMemo(
+    () =>
+      poles.map((pole) => ({
+        v: pole.pct,
+        c0: pole.colorSoft,
+        c1: pole.color,
+      })),
+    [poles],
+  );
+
+  const revenueMillions = (kpis?.revenueMonthFcfa ?? 12_400_000) / 1_000_000;
+
   useEffect(() => {
-    if (!active) return;
-    const t = window.setTimeout(() => {
-      drawRevChart(revenueRef.current);
-      drawDonut(donutRef.current);
-    }, 100);
-    const onResize = () => {
-      drawRevChart(revenueRef.current);
-      drawDonut(donutRef.current);
+    if (!active || !data) return;
+    const draw = () => {
+      drawRevChart(revenueRef.current, {
+        data: chartRevenue.map((p) => p.value),
+        months: chartRevenue.map((p) => p.label),
+      });
+      drawDonut(donutRef.current, {
+        segments: donutSegments.length > 0 ? donutSegments : undefined,
+        centerLabel: abbrevMillions(data.totalRevenueFcfa),
+      });
     };
-    window.addEventListener("resize", onResize);
+    const t = window.setTimeout(draw, 100);
+    window.addEventListener("resize", draw);
     return () => {
       window.clearTimeout(t);
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", draw);
     };
-  }, [active]);
+  }, [active, data, chartRevenue, donutSegments]);
 
   return (
     <div className={`page${active ? " active" : ""}`} id="page-overview">
+      <section className="db-premium-hero" aria-label="Vue d'ensemble">
+        <p className="db-hero-eyebrow">Infinite Core · Noya Industries</p>
+        <h2 className="db-hero-title">Pilotage stratégique en temps réel</h2>
+        <p className="db-hero-lead">
+          Finance, clients, projets et équipe — un centre de commande unifié pour
+          accélérer vos décisions et suivre la performance du groupe.
+        </p>
+        <div className="db-hero-meta">
+          <span className="db-hero-chip">📊 {poles.length || 4} pôles actifs</span>
+          <span className="db-hero-chip">🌍 Abidjan · CI</span>
+          <span className="db-hero-chip">⚡ Mise à jour live</span>
+        </div>
+      </section>
+
       <div className="kpi-row">
         <div className="kpi gold">
           <div className="kpi-label">Chiffre d&apos;affaires — Mois</div>
           <div className="kpi-val">
-            <KpiMillions active={active} />
+            <KpiMillions active={active} millions={revenueMillions} />
           </div>
-          <div className="kpi-delta up">▲ +18% vs mois précédent</div>
+          <div className="kpi-delta up">{kpis?.revenueMonthDelta ?? "—"}</div>
           <svg className="kpi-spark" width={80} height={40} viewBox="0 0 80 40">
             <polyline
               points="0,35 12,28 24,30 36,18 48,22 60,10 72,14 80,8"
@@ -185,9 +166,13 @@ export function OverviewPage({
         <div className="kpi blue">
           <div className="kpi-label">Clients actifs</div>
           <div className="kpi-val">
-            <KpiCount active={active} target={148} suffix=" clients" />
+            <KpiCount
+              active={active}
+              target={kpis?.activeClients ?? 0}
+              suffix=" clients"
+            />
           </div>
-          <div className="kpi-delta up">▲ +6 ce mois</div>
+          <div className="kpi-delta up">{kpis?.clientsDelta ?? "—"}</div>
           <svg className="kpi-spark" width={80} height={40} viewBox="0 0 80 40">
             <polyline
               points="0,30 14,25 28,28 42,20 56,22 70,14 80,12"
@@ -200,9 +185,15 @@ export function OverviewPage({
         <div className="kpi green">
           <div className="kpi-label">Projets en cours</div>
           <div className="kpi-val">
-            <KpiCount active={active} target={23} suffix=" actifs" />
+            <KpiCount
+              active={active}
+              target={kpis?.activeProjects ?? 0}
+              suffix=" actifs"
+            />
           </div>
-          <div className="kpi-delta neutral">● 3 en retard</div>
+          <div className="kpi-delta neutral">
+            ● {kpis?.projectsLate ?? 0} en retard
+          </div>
           <svg className="kpi-spark" width={80} height={40} viewBox="0 0 80 40">
             <polyline
               points="0,32 16,28 32,24 48,18 64,20 80,15"
@@ -215,9 +206,15 @@ export function OverviewPage({
         <div className="kpi purple">
           <div className="kpi-label">Factures impayées</div>
           <div className="kpi-val">
-            <KpiCount active={active} target={7} suffix=" en attente" />
+            <KpiCount
+              active={active}
+              target={kpis?.unpaidInvoices ?? 0}
+              suffix=" en attente"
+            />
           </div>
-          <div className="kpi-delta down">▼ 2 en retard</div>
+          <div className="kpi-delta down">
+            ▼ {kpis?.invoicesLate ?? 0} en retard
+          </div>
           <svg className="kpi-spark" width={80} height={40} viewBox="0 0 80 40">
             <polyline
               points="0,15 12,20 24,16 36,24 48,20 60,28 72,24 80,30"
@@ -329,55 +326,23 @@ export function OverviewPage({
               aria-hidden
             />
             <div className="donut-legend">
-              <div className="dl-item">
-                <div className="dl-dot" style={{ background: "var(--gold)" }} />
-                Consulting <div className="dl-pct">42%</div>
-              </div>
-              <div className="dl-item">
-                <div
-                  className="dl-dot"
-                  style={{ background: "var(--cobalt2)" }}
-                />
-                Tech & SaaS <div className="dl-pct">31%</div>
-              </div>
-              <div className="dl-item">
-                <div className="dl-dot" style={{ background: "var(--green)" }} />
-                Academy <div className="dl-pct">18%</div>
-              </div>
-              <div className="dl-item">
-                <div
-                  className="dl-dot"
-                  style={{ background: "var(--purple)" }}
-                />
-                Startup Studio <div className="dl-pct">9%</div>
-              </div>
+              {poles.map((pole) => (
+                <div className="dl-item" key={pole.key}>
+                  <div className="dl-dot" style={{ background: pole.color }} />
+                  {pole.label} <div className="dl-pct">{pole.pct}%</div>
+                </div>
+              ))}
             </div>
           </div>
           <div className="mini-grid">
-            <div className="mini-stat">
-              <div className="mini-val" style={{ color: "var(--gold)" }}>
-                4.2M
+            {poles.slice(0, 4).map((pole) => (
+              <div className="mini-stat" key={pole.key}>
+                <div className="mini-val" style={{ color: pole.color }}>
+                  {abbrevMillions(pole.amountFcfa)}
+                </div>
+                <div className="mini-lbl">{pole.label.split(" ")[0]}</div>
               </div>
-              <div className="mini-lbl">Consulting</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-val" style={{ color: "var(--cobalt3)" }}>
-                3.1M
-              </div>
-              <div className="mini-lbl">Tech</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-val" style={{ color: "#34D399" }}>
-                1.8M
-              </div>
-              <div className="mini-lbl">Academy</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-val" style={{ color: "#A78BFA" }}>
-                0.9M
-              </div>
-              <div className="mini-lbl">Startup Studio</div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -387,7 +352,9 @@ export function OverviewPage({
           <div className="card-head">
             <div>
               <div className="card-title">📁 Dernières missions</div>
-              <div className="card-sub">14 actives ce mois</div>
+              <div className="card-sub">
+                {kpis?.activeProjects ?? 0} actives ce mois
+              </div>
             </div>
             <div className="card-actions">
               <button type="button" className="ca-btn">
@@ -466,74 +433,31 @@ export function OverviewPage({
           </div>
           <div className="card-body">
             <div className="activity">
-              <div className="act-item">
+              {activities.length === 0 ? (
                 <div
-                  className="act-dot"
-                  style={{ background: "var(--green)" }}
-                />
-                <div className="act-text">
-                  <strong>Paiement reçu</strong> — Sté Coulibaly · 280 000 FCFA
+                  style={{
+                    textAlign: "center",
+                    padding: 18,
+                    fontSize: 13,
+                    color: "var(--fog)",
+                  }}
+                >
+                  Aucune activité récente.
                 </div>
-                <div className="act-time">il y a 23min</div>
-              </div>
-              <div className="act-item">
-                <div
-                  className="act-dot"
-                  style={{ background: "var(--gold)" }}
-                />
-                <div className="act-text">
-                  <strong>Nouveau client</strong> — Marc Touré ajouté au CRM
-                </div>
-                <div className="act-time">il y a 1h</div>
-              </div>
-              <div className="act-item">
-                <div
-                  className="act-dot"
-                  style={{ background: "var(--cobalt3)" }}
-                />
-                <div className="act-text">
-                  <strong>Rapport livré</strong> — Audit Rapide · Cabinet KF
-                </div>
-                <div className="act-time">il y a 2h</div>
-              </div>
-              <div className="act-item">
-                <div className="act-dot" style={{ background: "var(--red)" }} />
-                <div className="act-text">
-                  <strong>Retard signalé</strong> — Projet PRESENZ-012
-                </div>
-                <div className="act-time">il y a 3h</div>
-              </div>
-              <div className="act-item">
-                <div
-                  className="act-dot"
-                  style={{ background: "var(--purple)" }}
-                />
-                <div className="act-text">
-                  <strong>Devis envoyé</strong> — Awa Koné · Infinite Core
-                </div>
-                <div className="act-time">il y a 5h</div>
-              </div>
-              <div className="act-item">
-                <div
-                  className="act-dot"
-                  style={{ background: "var(--green)" }}
-                />
-                <div className="act-text">
-                  <strong>Session Academy</strong> — Formation Mktg Digital · 12
-                  inscrits
-                </div>
-                <div className="act-time">hier</div>
-              </div>
-              <div className="act-item">
-                <div
-                  className="act-dot"
-                  style={{ background: "var(--gold)" }}
-                />
-                <div className="act-text">
-                  <strong>Contrat signé</strong> — LONACI · Audit Institutionnel
-                </div>
-                <div className="act-time">hier</div>
-              </div>
+              ) : (
+                activities.map((act, index) => (
+                  <div className="act-item" key={`${act.title}-${index}`}>
+                    <div
+                      className="act-dot"
+                      style={{ background: act.dotColor }}
+                    />
+                    <div className="act-text">
+                      <strong>{act.title}</strong> — {act.detail}
+                    </div>
+                    <div className="act-time">{act.time}</div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

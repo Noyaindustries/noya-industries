@@ -5,6 +5,8 @@ import { matchesSearch } from "@/lib/dashboard/textSearch";
 import { drawFinChart } from "@/lib/dashboard/chartDrawers";
 import { downloadCsv } from "@/lib/dashboard/downloadCsv";
 import { useDashboardUi } from "../dashboardUiContext";
+import { formatFcfa } from "@/lib/dashboard/module-fallbacks";
+import { useDashboardModule } from "@/hooks/useDashboardModule";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type FinancePageProps = {
@@ -255,6 +257,17 @@ function ChargesBlock() {
   );
 }
 
+type FinanceApiInvoice = {
+  number: string;
+  client: string;
+  mission: string;
+  dateLabel: string;
+  dueLabel: string;
+  amount: number;
+  amountTone: string;
+  status: string;
+};
+
 export function FinancePage({
   active,
   section,
@@ -265,19 +278,58 @@ export function FinancePage({
   const [invoiceStatusFilter, setInvoiceStatusFilter] =
     useState<InvoiceStatusFilter>("all");
   const finRef = useRef<HTMLCanvasElement>(null);
+  const { data: financeData, reload } = useDashboardModule<{ invoices: FinanceApiInvoice[] }>(
+    "/api/dashboard/finance",
+    active,
+  );
+
+  const invoices = useMemo((): InvoiceRow[] => {
+    if (!financeData?.invoices) return INVOICES;
+    return financeData.invoices.map((i) => ({
+      num: i.number,
+      client: i.client,
+      mission: i.mission,
+      date: i.dateLabel,
+      due: i.dueLabel,
+      amount: formatFcfa(i.amount),
+      amountTone: i.amountTone === "red" ? "red" : "gold",
+      status: (["payé", "retard", "attente", "partiel"].includes(i.status)
+        ? i.status
+        : "attente") as InvoiceRow["status"],
+    }));
+  }, [financeData]);
 
   const filteredInvoices = useMemo(
     () => {
       const bySearch = filterInvoiceRows(
-        INVOICES,
+        invoices,
         section === "invoices" ? invoiceQuery : "",
         globalSearch,
       );
       if (invoiceStatusFilter === "all") return bySearch;
       return bySearch.filter((row) => row.status === invoiceStatusFilter);
     },
-    [section, invoiceQuery, globalSearch, invoiceStatusFilter],
+    [invoices, section, invoiceQuery, globalSearch, invoiceStatusFilter],
   );
+
+  async function addInvoice() {
+    const client = window.prompt("Client ?");
+    if (!client?.trim()) return;
+    const mission = window.prompt("Mission ?") ?? "Prestation";
+    const number = `F-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`;
+    const amount = Number.parseInt(window.prompt("Montant FCFA ?") ?? "0", 10) || 0;
+    const response = await fetch("/api/dashboard/finance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ number, client, mission, amount }),
+    });
+    if (!response.ok) {
+      pushToast("Impossible de créer la facture.");
+      return;
+    }
+    pushToast("Facture créée.");
+    void reload();
+  }
 
   const cycleInvoiceStatusFilter = () => {
     const order: InvoiceStatusFilter[] = [
@@ -435,9 +487,7 @@ export function FinancePage({
               <button
                 type="button"
                 className="ca-btn primary"
-                onClick={() =>
-                  pushToast("Nouvelle facture (démo) — formulaire à brancher")
-                }
+                onClick={() => void addInvoice()}
               >
                 ＋ Nouvelle facture
               </button>

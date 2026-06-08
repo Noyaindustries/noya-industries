@@ -12,6 +12,7 @@
     "db:push": "npx prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
     "admin:create": "npx tsx scripts/create-admin.ts",
+    "db:seed-dashboard": "npx tsx scripts/seed-dashboard.ts",
     "gen:favicon": "node scripts/gen-favicon.cjs"
   },
   "prisma": {

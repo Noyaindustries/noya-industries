@@ -83,13 +83,16 @@ function drawHorizontalGrid(
   }
 }
 
-export function drawRevChart(canvas: HTMLCanvasElement | null) {
+export function drawRevChart(
+  canvas: HTMLCanvasElement | null,
+  options?: { data?: number[]; months?: string[] },
+) {
   if (!canvas) return;
   const setup = setupHiDpi(canvas);
   if (!setup) return;
   const { ctx, W, H } = setup;
-  const data = [7200, 9100, 8400, 11200, 10600, 12400];
-  const months = ["Nov", "Déc", "Jan", "Fév", "Mar", "Avr"];
+  const data = options?.data ?? [7200, 9100, 8400, 11200, 10600, 12400];
+  const months = options?.months ?? ["Nov", "Déc", "Jan", "Fév", "Mar", "Avr"];
   const pad: Pad = { t: 22, r: 18, b: 38, l: 48 };
   const cw = W - pad.l - pad.r;
   const ch = H - pad.t - pad.b;
@@ -210,7 +213,13 @@ function withAlpha(hex: string, a: number): string {
   return hex;
 }
 
-export function drawDonut(canvas: HTMLCanvasElement | null) {
+export function drawDonut(
+  canvas: HTMLCanvasElement | null,
+  options?: {
+    segments?: { v: number; c0: string; c1: string }[];
+    centerLabel?: string;
+  },
+) {
   if (!canvas) return;
   const setup = setupHiDpi(canvas);
   if (!setup) return;
@@ -221,7 +230,7 @@ export function drawDonut(canvas: HTMLCanvasElement | null) {
   const cy = H / 2;
   const r1 = 50 * k;
   const r0 = 31 * k;
-  const data: { v: number; c0: string; c1: string }[] = [
+  const data: { v: number; c0: string; c1: string }[] = options?.segments ?? [
     { v: 42, c0: "#fff4d6", c1: GOLD_SOFT },
     { v: 31, c0: "#dbeafe", c1: COBALT_SOFT },
     { v: 18, c0: "#d1fae5", c1: EMERALD_SOFT },
@@ -259,7 +268,7 @@ export function drawDonut(canvas: HTMLCanvasElement | null) {
   ctx.textBaseline = "middle";
   ctx.shadowColor = "rgba(201, 119, 6, 0.25)";
   ctx.shadowBlur = 8;
-  ctx.fillText("10M", cx, cy - 5 * k);
+  ctx.fillText(options?.centerLabel ?? "10M", cx, cy - 5 * k);
   ctx.shadowBlur = 0;
   ctx.fillStyle = INK_MUTED;
   ctx.font = `${Math.max(7, 8 * k)}px var(--font-dm-mono), DM Mono, monospace`;
