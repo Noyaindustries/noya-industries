@@ -80,3 +80,32 @@ model BlogComment {
   message   String
   createdAt DateTime @default(now())
 }
+
+model AdminUser {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AppSettings {
+  id                         String   @id @default("default") @map("_id")
+  companyName                String
+  legalName                  String
+  contactEmail               String
+  phone                      String
+  website                    String
+  city                       String
+  address                    String
+  twoFactorEnabled           Boolean  @default(false)
+  loginAlerts                Boolean  @default(true)
+  sessionTimeoutEnabled      Boolean  @default(true)
+  passwordRotationDays       Int      @default(90)
+  infinitecoreWebhookUrl     String?
+  infinitecoreWebhookEnabled Boolean  @default(true)
+  recruitmentPublicUrl       String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}

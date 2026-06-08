@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export default function AdminLoginPage() {
       const response = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -59,6 +60,17 @@ export default function AdminLoginPage() {
             <div className="admin-login-badge">Noya Industries</div>
             <p>Authentification administrateur</p>
           </div>
+          <label className="blog-field blog-field-full">
+            <span>Email</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="services@noyaindustries.com"
+              autoComplete="username"
+              required
+            />
+          </label>
           <label className="blog-field blog-field-full">
             <span>Mot de passe</span>
             <input

@@ -62,9 +62,9 @@ import { ProjectsPage } from "./pages/ProjectsPage";
 import {
   AcademyPage,
   CommsPage,
-  SettingsPage,
   StockPage,
 } from "./pages/StubPages";
+import { SettingsPage } from "./pages/SettingsPage";
 
 const INITIAL_ALERTS: DashboardAlert[] = [
   {

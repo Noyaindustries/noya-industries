@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   ADMIN_SESSION_COOKIE,
-  buildAdminToken,
   getConfiguredAdminPassword,
+  verifyAdminSessionValue,
+  verifyLegacyAdminSessionValue,
 } from "@/lib/admin-auth";
 
 export async function middleware(request: NextRequest) {
@@ -15,17 +16,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const configuredPassword = getConfiguredAdminPassword();
-  if (!configuredPassword) {
-    if (isAdminLoginPath) return NextResponse.next();
-    return NextResponse.redirect(new URL("/admin-login?error=config", request.url));
-  }
-
-  const expectedToken = await buildAdminToken(configuredPassword);
   const sessionToken = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-  const isAuthenticated = sessionToken === expectedToken;
+  const configuredPassword = getConfiguredAdminPassword();
+  const adminId = await verifyAdminSessionValue(sessionToken);
+  const isLegacyAuthenticated =
+    configuredPassword !== null &&
+    (await verifyLegacyAdminSessionValue(sessionToken, configuredPassword));
+  const isAuthenticated = Boolean(adminId) || isLegacyAuthenticated;
 
   if ((isDashboardPath || isDashboardApiPath) && !isAuthenticated) {
+    if (!configuredPassword && !adminId) {
+      if (isAdminLoginPath) return NextResponse.next();
+      return NextResponse.redirect(new URL("/admin-login?error=config", request.url));
+    }
     if (isDashboardApiPath) {
       return NextResponse.json({ error: "Authentification admin requise." }, { status: 401 });
     }
@@ -44,4 +47,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/dashboard/:path*", "/api/dashboard/:path*", "/admin-login"],
 };
-

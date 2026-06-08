@@ -2935,6 +2935,28 @@
   margin-top: 14px;
 }
 
+.settings-status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.settings-status-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.92rem;
+}
+
+.settings-status-list li:last-child {
+  border-bottom: none;
+}
+
 .blog-form-action-hint {
   margin-top: 8px;
   color: var(--fog);
