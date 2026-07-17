@@ -2,22 +2,69 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   ADMIN_SESSION_COOKIE,
+  ADMIN_SESSION_TTL_SECONDS,
   buildAdminSessionValue,
-  buildAdminToken,
   buildLegacyAdminSessionValue,
   getConfiguredAdminPassword,
+  timingSafeStringEqual,
+  hashPassword,
   verifyPassword,
 } from "@/lib/admin-auth";
+import {
+  clearRateLimit,
+  consumeRateLimit,
+  getClientIp,
+} from "@/lib/security/rate-limit";
 
 type LoginPayload = {
   email?: string;
   password?: string;
 };
 
+const LOGIN_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
+const MAX_LOGIN_BODY_BYTES = 8 * 1024;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+let dummyPasswordHash: Promise<string> | null = null;
+
+function getDummyPasswordHash(): Promise<string> {
+  dummyPasswordHash ??= hashPassword("invalid-password-padding-value");
+  return dummyPasswordHash;
+}
+
 export async function POST(request: Request) {
+  const contentLength = Number.parseInt(
+    request.headers.get("content-length") ?? "0",
+    10,
+  );
+  if (Number.isFinite(contentLength) && contentLength > MAX_LOGIN_BODY_BYTES) {
+    return NextResponse.json({ error: "Requête trop volumineuse." }, { status: 413 });
+  }
+
+  const clientIp = getClientIp(request);
   const body = (await request.json().catch(() => null)) as LoginPayload | null;
   const submittedPassword = body?.password?.trim() ?? "";
   const submittedEmail = body?.email?.trim().toLowerCase() ?? "";
+  const ipRateLimitKey = `admin-login:ip:${clientIp}`;
+  const identityRateLimitKey = `admin-login:identity:${submittedEmail || "legacy"}`;
+  const ipLimit = consumeRateLimit(ipRateLimitKey, LOGIN_RATE_LIMIT);
+  const identityLimit = consumeRateLimit(identityRateLimitKey, LOGIN_RATE_LIMIT);
+
+  if (!ipLimit.allowed || !identityLimit.allowed) {
+    const retryAfterSeconds = Math.max(
+      ipLimit.retryAfterSeconds,
+      identityLimit.retryAfterSeconds,
+    );
+    return NextResponse.json(
+      { error: "Trop de tentatives. Réessayez plus tard." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSeconds),
+          "Cache-Control": "no-store",
+        },
+      },
+    );
+  }
 
   if (!submittedPassword) {
     return NextResponse.json({ error: "Mot de passe requis." }, { status: 400 });
@@ -25,18 +72,27 @@ export async function POST(request: Request) {
 
   let sessionValue: string | null = null;
 
-  if (process.env.DATABASE_URL && submittedEmail) {
+  if (process.env.DATABASE_URL) {
+    if (!submittedEmail || !emailPattern.test(submittedEmail)) {
+      return NextResponse.json(
+        { error: "Adresse e-mail et mot de passe requis." },
+        { status: 400 },
+      );
+    }
+
     try {
       const admin = await prisma.adminUser.findUnique({ where: { email: submittedEmail } });
-      if (admin && (await verifyPassword(submittedPassword, admin.passwordHash))) {
-        sessionValue = buildAdminSessionValue(admin.id, await buildAdminToken(admin.id));
+      const passwordHash = admin?.passwordHash ?? (await getDummyPasswordHash());
+      if (await verifyPassword(submittedPassword, passwordHash)) {
+        if (admin) sessionValue = await buildAdminSessionValue(admin.id);
       }
     } catch {
-      // Fallback vers ADMIN_PASSWORD si la base est indisponible.
+      return NextResponse.json(
+        { error: "Service d'authentification temporairement indisponible." },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
     }
-  }
-
-  if (!sessionValue) {
+  } else {
     const configuredPassword = getConfiguredAdminPassword();
     if (!configuredPassword) {
       return NextResponse.json(
@@ -44,21 +100,34 @@ export async function POST(request: Request) {
         { status: 500 },
       );
     }
-    if (submittedPassword !== configuredPassword) {
-      return NextResponse.json({ error: "Identifiants incorrects." }, { status: 401 });
+    if (timingSafeStringEqual(submittedPassword, configuredPassword)) {
+      sessionValue = await buildLegacyAdminSessionValue(configuredPassword);
     }
-    sessionValue = await buildLegacyAdminSessionValue(configuredPassword);
   }
 
-  const response = NextResponse.json({ ok: true });
+  if (!sessionValue) {
+    return NextResponse.json(
+      { error: "Identifiants incorrects." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  clearRateLimit(ipRateLimitKey);
+  clearRateLimit(identityRateLimitKey);
+
+  const response = NextResponse.json(
+    { ok: true },
+    { headers: { "Cache-Control": "no-store" } },
+  );
   response.cookies.set({
     name: ADMIN_SESSION_COOKIE,
     value: sessionValue,
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
-    maxAge: 60 * 60 * 12,
+    maxAge: ADMIN_SESSION_TTL_SECONDS,
+    priority: "high",
   });
   return response;
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
+import { consumeRateLimit, getClientIp } from "@/lib/security/rate-limit";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -7,6 +8,7 @@ const WEBHOOK_RETRY_MS = 1800;
 const WEBHOOK_MAX_RETRIES = 3;
 const DEFAULT_INFINITECORE_WEBHOOK_URL =
   "https://www.infinitecore.net/api/webhooks/noya-recrutement";
+const MAX_PARTNERSHIP_BODY_BYTES = 32 * 1024;
 
 type ForwardPayload = {
   workType: "partenaire" | "investisseur";
@@ -74,8 +76,31 @@ function logPartnershipDebug(message: string, details?: Record<string, unknown>)
   console.info(`${prefix} ${message}`);
 }
 
+function getValidatedWebhookEndpoint(): string {
+  const configuredEndpoint =
+    process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
+    DEFAULT_INFINITECORE_WEBHOOK_URL;
+  const endpoint = new URL(configuredEndpoint);
+  const allowedHosts = new Set(
+    (process.env.NOYA_ALLOWED_WEBHOOK_HOSTS ?? "www.infinitecore.net")
+      .split(",")
+      .map((host) => host.trim().toLowerCase())
+      .filter(Boolean),
+  );
+
+  if (
+    endpoint.protocol !== "https:" ||
+    !allowedHosts.has(endpoint.hostname.toLowerCase()) ||
+    endpoint.username ||
+    endpoint.password
+  ) {
+    throw new Error("Webhook endpoint rejected by security policy.");
+  }
+  return endpoint.toString();
+}
+
 async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
-  const endpoint = process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ?? DEFAULT_INFINITECORE_WEBHOOK_URL;
+  const endpoint = getValidatedWebhookEndpoint();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -132,6 +157,31 @@ function jsonErrorFromResponse(
 }
 
 export async function POST(request: Request) {
+  const contentLength = Number.parseInt(
+    request.headers.get("content-length") ?? "0",
+    10,
+  );
+  if (
+    Number.isFinite(contentLength) &&
+    contentLength > MAX_PARTNERSHIP_BODY_BYTES
+  ) {
+    return NextResponse.json({ error: "Requête trop volumineuse." }, { status: 413 });
+  }
+
+  const rateLimit = consumeRateLimit(`partnership:${getClientIp(request)}`, {
+    limit: 3,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Trop de demandes envoyées. Réessayez plus tard." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -214,55 +264,9 @@ export async function POST(request: Request) {
   };
 
   try {
-    const endpoint = process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ?? DEFAULT_INFINITECORE_WEBHOOK_URL;
     const webhookSecret = process.env.NOYA_RECRUTEMENT_WEBHOOK_SECRET?.trim() ?? "";
-    let endpointHost = "invalid-endpoint";
-    try {
-      endpointHost = new URL(endpoint).host;
-    } catch {
-      endpointHost = "invalid-endpoint";
-    }
-    // #region agent log
-    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
-      body: JSON.stringify({
-        sessionId: "1de7f5",
-        runId: "pre-fix",
-        hypothesisId: "H1,H4,H5",
-        location: "route.ts:POST:validated",
-        message: "Partnership payload validated server-side",
-        data: {
-          workType: payload.workType,
-          hasPartnerType: Boolean(payload.partnerType),
-          hasPartnerDescription: Boolean(payload.partnerDescription),
-          interestsCount: payload.interests.length,
-          idempotencyKeyPrefix: buildIdempotencyKey(payload).slice(0, 12),
-          endpointHost,
-          hasWebhookSecret: webhookSecret.length > 0,
-          hasCustomUserAgent: Boolean(process.env.NOYA_INFINITECORE_WEBHOOK_USER_AGENT?.trim()),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     if (webhookSecret.length === 0) {
-      // #region agent log
-      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
-        body: JSON.stringify({
-          sessionId: "1de7f5",
-          runId: "post-fix",
-          hypothesisId: "H6",
-          location: "route.ts:POST:missing-webhook-secret",
-          message: "Webhook secret missing, aborting upstream call",
-          data: { endpointHost },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       return NextResponse.json(
         {
           error:
@@ -282,21 +286,6 @@ export async function POST(request: Request) {
 
     let res = await postToInfiniteCore(payload);
     let attempts = 1;
-    // #region agent log
-    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
-      body: JSON.stringify({
-        sessionId: "1de7f5",
-        runId: "pre-fix",
-        hypothesisId: "H1,H2",
-        location: "route.ts:POST:upstream-first-response",
-        message: "Received first upstream response",
-        data: { status: res.status, retryAfter: res.headers.get("Retry-After") },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     logPartnershipDebug("upstream response", {
       attempt: attempts,
       status: res.status,
@@ -312,21 +301,6 @@ export async function POST(request: Request) {
       await new Promise((r) => setTimeout(r, waitMs));
       res = await postToInfiniteCore(payload);
       attempts += 1;
-      // #region agent log
-      fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
-        body: JSON.stringify({
-          sessionId: "1de7f5",
-          runId: "pre-fix",
-          hypothesisId: "H1,H2,H5",
-          location: "route.ts:POST:upstream-retry-response",
-          message: "Received upstream response after retry",
-          data: { attempt: attempts, status: res.status, retryAfter: res.headers.get("Retry-After") },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       logPartnershipDebug("upstream response", {
         attempt: attempts,
         status: res.status,
@@ -335,33 +309,6 @@ export async function POST(request: Request) {
     }
 
     const { details, rawText } = await readResponseBody(res);
-    // #region agent log
-    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
-      body: JSON.stringify({
-        sessionId: "1de7f5",
-        runId: "pre-fix",
-        hypothesisId: "H6,H7,H8",
-        location: "route.ts:POST:upstream-details",
-        message: "Parsed upstream payload details",
-        data: {
-          status: res.status,
-          hasJsonDetails: details !== null,
-          detailKeys:
-            details && typeof details === "object" ? Object.keys(details as Record<string, unknown>).slice(0, 6) : [],
-          detailError:
-            details && typeof details === "object" && "error" in details
-              ? (details as Record<string, unknown>).error
-              : null,
-          checkpointDetected:
-            res.status === 429 &&
-            rawText.toLowerCase().includes("vercel security checkpoint"),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     const upstreamReportsFailure =
       details !== null &&
@@ -388,21 +335,6 @@ export async function POST(request: Request) {
     const status = res.status || 502;
     const err = jsonErrorFromResponse(res, details);
     const httpStatus = status >= 400 && status < 600 ? status : 502;
-    // #region agent log
-    fetch("http://127.0.0.1:27772/ingest/e1c26ee0-a4a1-4c3b-b97f-b40a309d9f43", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1de7f5" },
-      body: JSON.stringify({
-        sessionId: "1de7f5",
-        runId: "pre-fix",
-        hypothesisId: "H1,H2,H4",
-        location: "route.ts:POST:return-error",
-        message: "Returning partnership API error",
-        data: { upstreamStatus: status, httpStatus, error: err.error, attempts },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     logPartnershipDebug("returning error response", {
       upstreamStatus: status,
       httpStatus,

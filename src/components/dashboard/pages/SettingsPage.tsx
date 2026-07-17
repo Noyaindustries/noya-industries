@@ -145,13 +145,19 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(passwordForm),
       });
-      const data = (await response.json()) as { error?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        reauthenticationRequired?: boolean;
+      };
       if (!response.ok) {
         pushToast(data.error ?? "Mot de passe non modifié.");
         return;
       }
       setPasswordForm(EMPTY_PASSWORD_FORM);
       pushToast("Mot de passe administrateur mis à jour.");
+      if (data.reauthenticationRequired) {
+        window.location.assign("/admin-login?password=changed");
+      }
     } catch {
       pushToast("Erreur réseau pendant le changement de mot de passe.");
     } finally {

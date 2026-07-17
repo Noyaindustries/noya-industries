@@ -12,7 +12,19 @@ export default function AdminLoginPage() {
   const nextUrl = useMemo(() => {
     if (typeof window === "undefined") return "/dashboard";
     const queryValue = new URLSearchParams(window.location.search).get("next");
-    return queryValue && queryValue.length > 0 ? queryValue : "/dashboard";
+    if (!queryValue || queryValue.startsWith("//")) return "/dashboard";
+    try {
+      const destination = new URL(queryValue, window.location.origin);
+      if (
+        destination.origin !== window.location.origin ||
+        !destination.pathname.startsWith("/dashboard")
+      ) {
+        return "/dashboard";
+      }
+      return `${destination.pathname}${destination.search}${destination.hash}`;
+    } catch {
+      return "/dashboard";
+    }
   }, []);
 
   async function onSubmit(event: FormEvent) {

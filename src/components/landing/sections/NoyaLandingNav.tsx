@@ -67,7 +67,9 @@ export function NoyaLandingNav() {
           </button>
           <button type="button" className="nav-lux-toggle" data-lux-toggle aria-label="Basculer le preset visuel luxe">
             Mode
-            <span className="nav-lux-value" data-lux-label>Showroom</span>
+            <span className="nav-lux-value" data-lux-label suppressHydrationWarning>
+              Showroom
+            </span>
           </button>
           <a href="/recrutement" className="nav-primary" onClick={closeMenu}>
             <span className="nav-primary-title">Devenir partenaire</span>

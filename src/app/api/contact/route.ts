@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { NOYA_CONTACT_EMAIL } from "@/lib/contact-email";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit, getClientIp } from "@/lib/security/rate-limit";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -16,6 +17,7 @@ type ForwardPayload = {
 
 /** Limite prudente pour les liens mailto (varie selon les clients). */
 const MAILTO_MAX_LEN = 1950;
+const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 
 function buildContactMailto(payload: ForwardPayload): string {
   const topicLine = payload.topic ? `Sujet : ${payload.topic}\n` : "";
@@ -43,6 +45,28 @@ function buildContactMailto(payload: ForwardPayload): string {
 }
 
 export async function POST(request: Request) {
+  const contentLength = Number.parseInt(
+    request.headers.get("content-length") ?? "0",
+    10,
+  );
+  if (Number.isFinite(contentLength) && contentLength > MAX_CONTACT_BODY_BYTES) {
+    return NextResponse.json({ error: "Requête trop volumineuse." }, { status: 413 });
+  }
+
+  const rateLimit = consumeRateLimit(`contact:${getClientIp(request)}`, {
+    limit: 5,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Trop de messages envoyés. Réessayez plus tard." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

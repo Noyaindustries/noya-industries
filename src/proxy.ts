@@ -6,14 +6,45 @@ import {
   verifyLegacyAdminSessionValue,
 } from "@/lib/admin-auth";
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+function isSameOriginMutation(request: NextRequest): boolean {
+  if (SAFE_METHODS.has(request.method)) return true;
+
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (fetchSite === "cross-site") return false;
+
+  const origin = request.headers.get("origin");
+  if (!origin) return process.env.NODE_ENV !== "production";
+  return origin === request.nextUrl.origin;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isDashboardPath = pathname.startsWith("/dashboard");
   const isDashboardApiPath = pathname.startsWith("/api/dashboard");
   const isAdminLoginPath = pathname === "/admin-login";
+  const isAdminApiPath = pathname.startsWith("/api/admin");
+  const isAdminLoginApiPath = pathname === "/api/admin/login";
+  const isAdminLogoutApiPath = pathname === "/api/admin/logout";
 
-  if (!isDashboardPath && !isDashboardApiPath && !isAdminLoginPath) {
+  if (
+    !isDashboardPath &&
+    !isDashboardApiPath &&
+    !isAdminLoginPath &&
+    !isAdminApiPath
+  ) {
     return NextResponse.next();
+  }
+
+  if (
+    (isDashboardApiPath || isAdminApiPath) &&
+    !isSameOriginMutation(request)
+  ) {
+    return NextResponse.json(
+      { error: "Origine de requête non autorisée." },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const sessionToken = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
@@ -24,19 +55,22 @@ export async function proxy(request: NextRequest) {
     (await verifyLegacyAdminSessionValue(sessionToken, configuredPassword));
   const isAuthenticated = Boolean(adminId) || isLegacyAuthenticated;
 
-  if ((isDashboardPath || isDashboardApiPath) && !isAuthenticated) {
-    if (!configuredPassword && !adminId) {
-      return NextResponse.redirect(new URL("/admin-login?error=config", request.url));
-    }
-    if (isDashboardApiPath) {
-      return NextResponse.json({ error: "Authentification admin requise." }, { status: 401 });
+  const requiresAuthentication =
+    isDashboardPath || isDashboardApiPath || isAdminLogoutApiPath;
+
+  if (requiresAuthentication && !isAuthenticated) {
+    if (isDashboardApiPath || isAdminLogoutApiPath) {
+      return NextResponse.json(
+        { error: "Authentification admin requise." },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
     }
     const loginUrl = new URL("/admin-login", request.url);
     loginUrl.searchParams.set("next", `${pathname}${search}`);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAdminLoginPath && isAuthenticated) {
+  if ((isAdminLoginPath || isAdminLoginApiPath) && isAuthenticated) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -44,5 +78,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/dashboard/:path*", "/admin-login"],
+  matcher: [
+    "/dashboard/:path*",
+    "/api/dashboard/:path*",
+    "/api/admin/:path*",
+    "/admin-login",
+  ],
 };

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit, getClientIp } from "@/lib/security/rate-limit";
+
+const MAX_COMMENT_BODY_BYTES = 8 * 1024;
 
 function normalizeSlug(input: string): string {
   return input
@@ -34,6 +37,28 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const contentLength = Number.parseInt(
+    request.headers.get("content-length") ?? "0",
+    10,
+  );
+  if (Number.isFinite(contentLength) && contentLength > MAX_COMMENT_BODY_BYTES) {
+    return NextResponse.json({ error: "Requête trop volumineuse." }, { status: 413 });
+  }
+
+  const rateLimit = consumeRateLimit(`blog-comment:${getClientIp(request)}`, {
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Trop de commentaires envoyés. Réessayez plus tard." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      },
+    );
+  }
+
   if (!process.env.DATABASE_URL || !prisma?.blogComment?.create) {
     return NextResponse.json(
       { error: "Les commentaires sont temporairement indisponibles." },

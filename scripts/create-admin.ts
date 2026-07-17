@@ -1,5 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-import { hashPassword } from "../src/lib/admin-auth";
+import {
+  hashPassword,
+  isStrongAdminPassword,
+} from "../src/lib/admin-auth";
 
 const prisma = new PrismaClient();
 
@@ -15,9 +18,9 @@ async function main() {
   const name = readArg("--name") ?? process.env.ADMIN_NAME ?? "Administrateur Noya";
   const password = readArg("--password") ?? process.env.ADMIN_PASSWORD?.trim();
 
-  if (!password || password.length < 8) {
+  if (!password || !isStrongAdminPassword(password)) {
     throw new Error(
-      "Mot de passe requis (min. 8 caractères). Passez --password ou définissez ADMIN_PASSWORD dans .env.",
+      "Mot de passe requis : 12 caractères minimum avec majuscule, minuscule, chiffre et symbole.",
     );
   }
 
