@@ -29,6 +29,8 @@ function getAdminSessionSecret(): string | null {
     return `${passwordFallback}\u0000${databaseSecret}`;
   }
   if (passwordFallback && passwordFallback.length >= 12) return passwordFallback;
+  // Dernier recours prod : DATABASE_URL est déjà un secret long côté plateforme.
+  if (databaseSecret && databaseSecret.length >= 32) return databaseSecret;
   return null;
 }
 

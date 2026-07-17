@@ -7,7 +7,6 @@ import {
   buildLegacyAdminSessionValue,
   getConfiguredAdminPassword,
   timingSafeStringEqual,
-  hashPassword,
   verifyPassword,
 } from "@/lib/admin-auth";
 import {
@@ -27,11 +26,12 @@ const IP_LOGIN_RATE_LIMIT = { limit: 10, windowMs: 10 * 60 * 1000 };
 const IDENTITY_LOGIN_RATE_LIMIT = { limit: 25, windowMs: 15 * 60 * 1000 };
 const MAX_LOGIN_BODY_BYTES = 8 * 1024;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-let dummyPasswordHash: Promise<string> | null = null;
+// Hash fixe (mot de passe factice) pour égaliser le temps de réponse sans coût PBKDF2 à chaque requête.
+const DUMMY_PASSWORD_HASH =
+  "pbkdf2:100000:5f8d7c6b5a4938271605f4e3d2c1b0a9:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b";
 
-function getDummyPasswordHash(): Promise<string> {
-  dummyPasswordHash ??= hashPassword("invalid-password-padding-value");
-  return dummyPasswordHash;
+function getDummyPasswordHash(): string {
+  return DUMMY_PASSWORD_HASH;
 }
 
 function rateLimitResponse(
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Mot de passe requis." }, { status: 400 });
   }
 
-  let sessionValue: string | null = null;
+  let authenticatedAdminId: string | null = null;
 
   if (process.env.DATABASE_URL) {
     if (!submittedEmail || !emailPattern.test(submittedEmail)) {
@@ -98,14 +98,21 @@ export async function POST(request: Request) {
     }
 
     try {
-      const admin = await prisma.adminUser.findUnique({ where: { email: submittedEmail } });
-      const passwordHash = admin?.passwordHash ?? (await getDummyPasswordHash());
-      if (await verifyPassword(submittedPassword, passwordHash)) {
-        if (admin) sessionValue = await buildAdminSessionValue(admin.id);
+      const admin = await prisma.adminUser.findUnique({
+        where: { email: submittedEmail },
+      });
+      const passwordHash = admin?.passwordHash ?? getDummyPasswordHash();
+      const passwordOk = await verifyPassword(submittedPassword, passwordHash);
+      if (passwordOk && admin) {
+        authenticatedAdminId = admin.id;
       }
-    } catch {
+    } catch (error) {
+      console.error("[admin/login] database auth failed", error);
       return NextResponse.json(
-        { error: "Service d'authentification temporairement indisponible." },
+        {
+          error:
+            "Base de données inaccessible. Vérifiez DATABASE_URL et l'accès réseau MongoDB (IP Vercel).",
+        },
         { status: 503, headers: { "Cache-Control": "no-store" } },
       );
     }
@@ -118,16 +125,33 @@ export async function POST(request: Request) {
       );
     }
     if (timingSafeStringEqual(submittedPassword, configuredPassword)) {
-      sessionValue = await buildLegacyAdminSessionValue(configuredPassword);
+      authenticatedAdminId = "legacy";
     }
   }
 
-  if (!sessionValue) {
+  if (!authenticatedAdminId) {
     consumeRateLimit(ipRateLimitKey, IP_LOGIN_RATE_LIMIT);
     consumeRateLimit(identityRateLimitKey, IDENTITY_LOGIN_RATE_LIMIT);
     return NextResponse.json(
       { error: "Identifiants incorrects." },
       { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  let sessionValue: string;
+  try {
+    sessionValue =
+      authenticatedAdminId === "legacy"
+        ? await buildLegacyAdminSessionValue(getConfiguredAdminPassword() ?? "")
+        : await buildAdminSessionValue(authenticatedAdminId);
+  } catch (error) {
+    console.error("[admin/login] session secret failed", error);
+    return NextResponse.json(
+      {
+        error:
+          "Configuration serveur incomplète : définissez ADMIN_SESSION_SECRET (≥ 32 caractères) dans Vercel.",
+      },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
 
