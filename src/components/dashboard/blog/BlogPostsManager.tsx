@@ -49,7 +49,7 @@ export function BlogPostsManager() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
-  const [errors, setErrors] = useState<Partial<Record<keyof BlogPost, string>>>({});
+  const [, setErrors] = useState<Partial<Record<keyof BlogPost, string>>>({});
   const localImageInputRef = useRef<HTMLInputElement | null>(null);
 
   const sortedPosts = useMemo(() => [...posts].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [posts]);
@@ -116,7 +116,7 @@ export function BlogPostsManager() {
       return Boolean(form.title.trim() && slugToValidate && form.category.trim());
     }
     if (currentStep === 2) {
-      return Boolean(form.excerpt.trim() && form.dateLabel.trim() && form.readTime.trim());
+      return Boolean(form.dateLabel.trim() && form.readTime.trim());
     }
     return true;
   }

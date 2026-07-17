@@ -6,7 +6,7 @@ import {
   verifyLegacyAdminSessionValue,
 } from "@/lib/admin-auth";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isDashboardPath = pathname.startsWith("/dashboard");
   const isDashboardApiPath = pathname.startsWith("/api/dashboard");
@@ -26,7 +26,6 @@ export async function middleware(request: NextRequest) {
 
   if ((isDashboardPath || isDashboardApiPath) && !isAuthenticated) {
     if (!configuredPassword && !adminId) {
-      if (isAdminLoginPath) return NextResponse.next();
       return NextResponse.redirect(new URL("/admin-login?error=config", request.url));
     }
     if (isDashboardApiPath) {

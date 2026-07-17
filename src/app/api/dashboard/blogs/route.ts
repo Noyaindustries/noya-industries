@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { FALLBACK_BLOG_POSTS } from "@/lib/blog-posts";
 
@@ -27,6 +28,27 @@ function normalizeSlug(input: string): string {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
+}
+
+function isVercelBlobUrl(value: string | null | undefined): value is string {
+  if (!value) return false;
+  try {
+    return new URL(value).hostname.endsWith(".blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
+
+async function deleteReplacedBlob(
+  previousUrl: string | null | undefined,
+  nextUrl?: string | null,
+): Promise<void> {
+  if (!isVercelBlobUrl(previousUrl) || previousUrl === nextUrl) return;
+  try {
+    await del(previousUrl);
+  } catch (error) {
+    console.error("[api/dashboard/blogs] Unable to delete replaced Blob image.", error);
+  }
 }
 
 function parsePayload(body: unknown): BlogPayload | null {
@@ -127,6 +149,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Payload blog invalide." }, { status: 400 });
   }
   try {
+    const previousPost = await prisma.blogPost.findUnique({
+      where: { slug: payload.slug },
+      select: { imageUrl: true },
+    });
     if (payload.featured) {
       await prisma.blogPost.updateMany({
         where: { slug: { not: payload.slug } },
@@ -137,6 +163,7 @@ export async function PUT(request: Request) {
       where: { slug: payload.slug },
       data: payload,
     });
+    await deleteReplacedBlob(previousPost?.imageUrl, payload.imageUrl);
     return NextResponse.json({ post });
   } catch {
     return NextResponse.json({ error: "Impossible de mettre à jour l'article." }, { status: 500 });
@@ -156,7 +183,12 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Slug manquant." }, { status: 400 });
   }
   try {
+    const post = await prisma.blogPost.findUnique({
+      where: { slug },
+      select: { imageUrl: true },
+    });
     await prisma.blogPost.delete({ where: { slug } });
+    await deleteReplacedBlob(post?.imageUrl);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Impossible de supprimer l'article." }, { status: 500 });

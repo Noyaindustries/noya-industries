@@ -133,7 +133,6 @@ function ProjectsTable({
   onExportClick?: () => void;
   onAddProject?: () => void;
 }) {
-  const { pushToast } = useDashboardUi();
   return (
     <>
       {showToolbar ? (

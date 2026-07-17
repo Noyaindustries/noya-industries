@@ -1,3 +1,5 @@
+import { NoyaLandingContactForm } from "../NoyaLandingContactForm";
+
 type NoyaLandingContactProps = {
   mode?: "contact" | "recruitment";
 };
@@ -162,10 +164,9 @@ export function NoyaLandingContact({ mode = "contact" }: NoyaLandingContactProps
                     : "Réponse sous 24h ouvrables."}
                 </div>
               </div>
-              <div
-                id="noya-landing-contact-root"
-                data-form-mode={mode === "recruitment" ? "recruitment" : "contact"}
-              />
+              <div id="noya-landing-contact-root">
+                <NoyaLandingContactForm mode={mode} />
+              </div>
             </div>
           </div>
         </div>

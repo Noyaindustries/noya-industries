@@ -69,6 +69,9 @@ type OverviewPageProps = {
   onClearAlerts: () => void;
 };
 
+const EMPTY_MISSIONS: OverviewData["missions"] = [];
+const EMPTY_POLES: OverviewData["poles"] = [];
+
 export function OverviewPage({
   active,
   alerts,
@@ -81,8 +84,8 @@ export function OverviewPage({
   const donutRef = useRef<HTMLCanvasElement>(null);
 
   const kpis = data?.kpis;
-  const missions = data?.missions ?? [];
-  const poles = data?.poles ?? [];
+  const missions = data?.missions ?? EMPTY_MISSIONS;
+  const poles = data?.poles ?? EMPTY_POLES;
   const activities = data?.activities ?? [];
 
   const filteredMissions = useMemo(

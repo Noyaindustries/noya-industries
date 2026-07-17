@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type CommentRecord = {
   id: string;
@@ -21,7 +21,7 @@ export function BlogComments({ slug }: BlogCommentsProps) {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
-  async function loadComments() {
+  const loadComments = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/blog/comments?slug=${encodeURIComponent(slug)}`, {
@@ -40,11 +40,11 @@ export function BlogComments({ slug }: BlogCommentsProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [slug]);
 
   useEffect(() => {
     void loadComments();
-  }, [slug]);
+  }, [loadComments]);
 
   async function submitComment(event: FormEvent) {
     event.preventDefault();

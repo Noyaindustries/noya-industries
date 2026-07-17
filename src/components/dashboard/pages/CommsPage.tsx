@@ -31,6 +31,8 @@ type CommsTemplate = {
   body: string;
 };
 
+const EMPTY_MESSAGES: ContactMessage[] = [];
+
 export function CommsPage({ active, section, onCommsNavigate }: CommsPageProps) {
   const { globalSearch, pushToast } = useDashboardUi();
   const [inboxQuery, setInboxQuery] = useState("");
@@ -39,7 +41,7 @@ export function CommsPage({ active, section, onCommsNavigate }: CommsPageProps) 
     templates: CommsTemplate[];
   }>("/api/dashboard/comms", active);
 
-  const messages = data?.messages ?? [];
+  const messages = data?.messages ?? EMPTY_MESSAGES;
   const templates = data?.templates ?? [];
   const unread = messages.filter((m) => m.status === "new");
 

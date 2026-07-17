@@ -22,6 +22,8 @@ type StockApiItem = {
   minQuantity: number;
 };
 
+const EMPTY_STOCK_ITEMS: StockApiItem[] = [];
+
 export function StockPage({ active, section, onStockNavigate }: StockPageProps) {
   const { globalSearch, pushToast } = useDashboardUi();
   const [catalogQuery, setCatalogQuery] = useState("");
@@ -30,7 +32,7 @@ export function StockPage({ active, section, onStockNavigate }: StockPageProps) 
     active,
   );
 
-  const items = data?.items ?? [];
+  const items = data?.items ?? EMPTY_STOCK_ITEMS;
   const lowStock = items.filter((i) => i.quantity <= i.minQuantity);
 
   const filteredCatalog = useMemo(

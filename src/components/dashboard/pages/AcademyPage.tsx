@@ -21,6 +21,8 @@ type AcademyApiProgram = {
   nextSession: string;
 };
 
+const EMPTY_PROGRAMS: AcademyApiProgram[] = [];
+
 function academyProgramTypeLabel(t: string): string {
   if (t === "presentiel") return "Présentiel";
   if (t === "ligne") return "En ligne";
@@ -35,7 +37,7 @@ export function AcademyPage({ active, section, onAcademyNavigate }: AcademyPageP
     active,
   );
 
-  const programs = data?.programs ?? [];
+  const programs = data?.programs ?? EMPTY_PROGRAMS;
   const totalLearners = programs.reduce((s, p) => s + p.learners, 0);
 
   const filteredPrograms = useMemo(

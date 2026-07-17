@@ -28,6 +28,7 @@ function toOptionalUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
+  if (trimmed === "#") return trimmed;
   if (trimmed.startsWith("/")) return trimmed;
   try {
     const parsed = new URL(trimmed);
@@ -77,6 +78,40 @@ function parsePayload(body: unknown): TeamPayload | null {
     socials,
     order,
   };
+}
+
+function toTeamMemberData(member: TeamPayload) {
+  return {
+    slug: member.slug,
+    initials: member.initials,
+    name: member.name,
+    role: member.role,
+    tone: member.tone,
+    desc: member.desc,
+    skills: member.skills,
+    imageUrl: member.imageUrl,
+    linkedin: member.socials.linkedin,
+    facebook: member.socials.facebook,
+    instagram: member.socials.instagram,
+    tiktok: member.socials.tiktok,
+    x: member.socials.x,
+    order: member.order,
+  };
+}
+
+async function ensureFallbackTeamMembers(): Promise<void> {
+  const memberCount = await prisma.teamMember.count();
+  if (memberCount > 0) return;
+
+  await Promise.all(
+    FALLBACK_TEAM_MEMBERS.map(async (member) => {
+      await prisma.teamMember.upsert({
+        where: { slug: member.slug },
+        update: {},
+        create: toTeamMemberData(member),
+      });
+    }),
+  );
 }
 
 function toResponseMember(member: {
@@ -135,23 +170,9 @@ export async function POST(request: Request) {
   const payload = parsePayload(await request.json().catch(() => null));
   if (!payload) return NextResponse.json({ error: "Payload équipe invalide." }, { status: 400 });
   try {
+    await ensureFallbackTeamMembers();
     const created = await prisma.teamMember.create({
-      data: {
-        slug: payload.slug,
-        initials: payload.initials,
-        name: payload.name,
-        role: payload.role,
-        tone: payload.tone,
-        desc: payload.desc,
-        skills: payload.skills,
-        imageUrl: payload.imageUrl,
-        linkedin: payload.socials.linkedin,
-        facebook: payload.socials.facebook,
-        instagram: payload.socials.instagram,
-        tiktok: payload.socials.tiktok,
-        x: payload.socials.x,
-        order: payload.order,
-      },
+      data: toTeamMemberData(payload),
     });
     return NextResponse.json({ member: toResponseMember(created) }, { status: 201 });
   } catch {
@@ -166,26 +187,14 @@ export async function PUT(request: Request) {
   const payload = parsePayload(await request.json().catch(() => null));
   if (!payload) return NextResponse.json({ error: "Payload équipe invalide." }, { status: 400 });
   try {
+    await ensureFallbackTeamMembers();
     const updated = await prisma.teamMember.update({
       where: { slug: payload.slug },
-      data: {
-        initials: payload.initials,
-        name: payload.name,
-        role: payload.role,
-        tone: payload.tone,
-        desc: payload.desc,
-        skills: payload.skills,
-        imageUrl: payload.imageUrl,
-        linkedin: payload.socials.linkedin,
-        facebook: payload.socials.facebook,
-        instagram: payload.socials.instagram,
-        tiktok: payload.socials.tiktok,
-        x: payload.socials.x,
-        order: payload.order,
-      },
+      data: toTeamMemberData(payload),
     });
     return NextResponse.json({ member: toResponseMember(updated) });
-  } catch {
+  } catch (error) {
+    console.error("Team member update failed:", error);
     return NextResponse.json({ error: "Impossible de mettre à jour le membre." }, { status: 500 });
   }
 }
@@ -198,6 +207,7 @@ export async function DELETE(request: Request) {
   const slug = normalizeSlug(searchParams.get("slug") ?? "");
   if (!slug) return NextResponse.json({ error: "Slug manquant." }, { status: 400 });
   try {
+    await ensureFallbackTeamMembers();
     await prisma.teamMember.delete({ where: { slug } });
     return NextResponse.json({ ok: true });
   } catch {

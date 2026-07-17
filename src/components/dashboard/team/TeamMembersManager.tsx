@@ -55,7 +55,7 @@ export function TeamMembersManager({ openCreateKey }: TeamMembersManagerProps) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const localImageInputRef = useRef<HTMLInputElement | null>(null);
-  const lastHandledOpenCreateKey = useRef<number | undefined>(undefined);
+  const lastHandledOpenCreateKey = useRef(0);
 
   const previewSlug = useMemo(
     () => (isEditing ? form.slug : normalizeSlug(form.slug || form.name)) || "apercu-slug",
@@ -81,11 +81,7 @@ export function TeamMembersManager({ openCreateKey }: TeamMembersManagerProps) {
   }, []);
 
   useEffect(() => {
-    if (openCreateKey === undefined) return;
-    if (lastHandledOpenCreateKey.current === undefined) {
-      lastHandledOpenCreateKey.current = openCreateKey;
-      return;
-    }
+    if (openCreateKey === undefined || openCreateKey <= 0) return;
     if (lastHandledOpenCreateKey.current === openCreateKey) return;
     lastHandledOpenCreateKey.current = openCreateKey;
     setForm(EMPTY_FORM);

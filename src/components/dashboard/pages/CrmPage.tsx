@@ -26,6 +26,8 @@ type ClientRow = {
   avColor?: string;
 };
 
+// Conservé comme jeu de référence pour les futures prévisualisations hors ligne.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CLIENTS: ClientRow[] = [
   {
     initials: "KF",
