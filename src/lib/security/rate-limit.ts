@@ -58,6 +58,29 @@ export function consumeRateLimit(
   };
 }
 
+export function getRateLimitStatus(
+  key: string,
+  options: RateLimitOptions,
+  now = Date.now(),
+): RateLimitResult {
+  cleanupExpiredBuckets(now);
+  const bucket = buckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    if (bucket) buckets.delete(key);
+    return {
+      allowed: true,
+      remaining: options.limit,
+      retryAfterSeconds: 0,
+    };
+  }
+
+  return {
+    allowed: bucket.count < options.limit,
+    remaining: Math.max(0, options.limit - bucket.count),
+    retryAfterSeconds: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)),
+  };
+}
+
 export function clearRateLimit(key: string): void {
   buckets.delete(key);
 }

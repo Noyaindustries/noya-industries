@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
@@ -9,6 +9,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
   const nextUrl = useMemo(() => {
     if (typeof window === "undefined") return "/dashboard";
     const queryValue = new URLSearchParams(window.location.search).get("next");
@@ -29,6 +30,8 @@ export default function AdminLoginPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError(null);
     setSubmitting(true);
     try {
@@ -47,6 +50,7 @@ export default function AdminLoginPage() {
     } catch {
       setError("Erreur réseau, réessaie.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -91,6 +95,7 @@ export default function AdminLoginPage() {
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
+              required
             />
           </label>
           <button type="submit" className="btn-hero admin-login-submit" disabled={submitting}>
