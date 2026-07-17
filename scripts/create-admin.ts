@@ -1,8 +1,11 @@
 import { PrismaClient } from "@prisma/client";
+import { loadEnvConfig } from "@next/env";
 import {
   hashPassword,
   isStrongAdminPassword,
 } from "../src/lib/admin-auth";
+
+loadEnvConfig(process.cwd());
 
 const prisma = new PrismaClient();
 
@@ -30,14 +33,14 @@ async function main() {
   if (existing) {
     await prisma.adminUser.update({
       where: { email },
-      data: { name, passwordHash },
+      data: { name, passwordHash, passwordChangedAt: new Date() },
     });
     console.log(`Admin mis à jour : ${email}`);
     return;
   }
 
   await prisma.adminUser.create({
-    data: { email, name, passwordHash },
+    data: { email, name, passwordHash, passwordChangedAt: new Date() },
   });
   console.log(`Admin créé : ${email}`);
 }

@@ -14,7 +14,7 @@ import { NoyaLandingContact } from "./sections/NoyaLandingContact";
 import { NoyaLandingCtaFinal } from "./sections/NoyaLandingCtaFinal";
 import { NoyaLandingFooter } from "./sections/NoyaLandingFooter";
 
-export function NoyaLandingBody() {
+export async function NoyaLandingBody() {
   return (
     <>
       <NoyaLandingBackground />

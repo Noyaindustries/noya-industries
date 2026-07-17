@@ -1,11 +1,14 @@
 import { NoyaLandingContactForm } from "../NoyaLandingContactForm";
+import { getAppSettings } from "@/lib/site-settings";
 
 type NoyaLandingContactProps = {
   mode?: "contact" | "recruitment";
 };
 
-export function NoyaLandingContact({ mode = "contact" }: NoyaLandingContactProps) {
+export async function NoyaLandingContact({ mode = "contact" }: NoyaLandingContactProps) {
   const isRecruitment = mode === "recruitment";
+  const settings = await getAppSettings();
+  const secondary = settings.phoneSecondary?.trim();
   return (
     <>
       <section className="sec-full contact-bg-premium" id="contact">
@@ -63,9 +66,7 @@ export function NoyaLandingContact({ mode = "contact" }: NoyaLandingContactProps
                 </div>
                 <div className="ccg-content">
                   <div className="ccg-label">Siège social</div>
-                  <div className="ccg-value">
-                    Abidjan, Riviera — Côte d&apos;Ivoire
-                  </div>
+                  <div className="ccg-value">{settings.address}</div>
                 </div>
                 <div className="ccg-shine" aria-hidden="true" />
               </div>
@@ -77,9 +78,13 @@ export function NoyaLandingContact({ mode = "contact" }: NoyaLandingContactProps
                 <div className="ccg-content">
                   <div className="ccg-label">Téléphone</div>
                   <div className="ccg-value">
-                    +225 01 03 015 467
-                    <br />
-                    +225 05 76 66 60 79
+                    {settings.phone}
+                    {secondary ? (
+                      <>
+                        <br />
+                        {secondary}
+                      </>
+                    ) : null}
                   </div>
                 </div>
                 <div className="ccg-shine" aria-hidden="true" />
@@ -91,7 +96,7 @@ export function NoyaLandingContact({ mode = "contact" }: NoyaLandingContactProps
                 </div>
                 <div className="ccg-content">
                   <div className="ccg-label">Email</div>
-                  <div className="ccg-value">services@noyaindustries.com</div>
+                  <div className="ccg-value">{settings.contactEmail}</div>
                 </div>
                 <div className="ccg-shine" aria-hidden="true" />
               </div>

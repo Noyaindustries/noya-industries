@@ -1969,6 +1969,55 @@ h2.display em{
   justify-content:center;
 }
 
+.password-input-wrap{
+  position:relative;
+  display:block;
+  width:100%;
+  color:inherit;
+  font:inherit;
+  letter-spacing:normal;
+  text-transform:none;
+}
+.password-input-wrap > input{
+  width:100%;
+  padding-right:46px !important;
+}
+.password-visibility-btn{
+  position:absolute;
+  top:50%;
+  right:8px;
+  z-index:2;
+  width:34px;
+  height:34px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  transform:translateY(-50%);
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:#756d62;
+  cursor:pointer;
+  transition:color .18s ease, background .18s ease;
+}
+.password-visibility-btn:hover{
+  background:rgba(161,112,10,.1);
+  color:#9a6900;
+}
+.password-visibility-btn:focus-visible{
+  outline:2px solid rgba(161,112,10,.45);
+  outline-offset:1px;
+}
+.password-visibility-btn svg{
+  width:20px;
+  height:20px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
 @keyframes admin-login-card-in{
   from{
     opacity:0;

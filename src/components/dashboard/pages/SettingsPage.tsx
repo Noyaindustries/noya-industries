@@ -2,8 +2,9 @@
 
 import type { SettingsSectionId } from "@/lib/dashboard/settingsNav";
 import type { AppSettingsRecord } from "@/lib/site-settings";
+import { PasswordVisibilityButton } from "@/components/PasswordVisibilityButton";
 import { useDashboardUi } from "../dashboardUiContext";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type SettingsPageProps = {
   active: boolean;
@@ -17,6 +18,8 @@ type AdminProfile = {
   email: string;
   createdAt: string;
   updatedAt: string;
+  lastLoginAt?: string | null;
+  passwordChangedAt?: string | null;
 };
 
 type PasswordForm = {
@@ -31,7 +34,9 @@ const EMPTY_PASSWORD_FORM: PasswordForm = {
   confirmPassword: "",
 };
 
-function formatDate(iso: string | null): string {
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   return new Intl.DateTimeFormat("fr-FR", {
     dateStyle: "medium",
@@ -39,15 +44,28 @@ function formatDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
+function passwordStrengthHints(password: string): string[] {
+  const hints: string[] = [];
+  if (password.length < 12) hints.push("12 caractères minimum");
+  if (!/[a-z]/.test(password)) hints.push("une minuscule");
+  if (!/[A-Z]/.test(password)) hints.push("une majuscule");
+  if (!/[0-9]/.test(password)) hints.push("un chiffre");
+  if (!/[^a-zA-Z0-9]/.test(password)) hints.push("un symbole");
+  return hints;
+}
+
 export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPageProps) {
   const { pushToast } = useDashboardUi();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
   const [databaseConnected, setDatabaseConnected] = useState(false);
   const [settings, setSettings] = useState<AppSettingsRecord | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState<string>("");
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [profileForm, setProfileForm] = useState({ name: "", email: "" });
   const [passwordForm, setPasswordForm] = useState<PasswordForm>(EMPTY_PASSWORD_FORM);
+  const [showPasswords, setShowPasswords] = useState(false);
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -65,6 +83,7 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
 
       if (settingsData.settings) {
         setSettings(settingsData.settings);
+        setSavedSnapshot(JSON.stringify(settingsData.settings));
         setDatabaseConnected(Boolean(settingsData.databaseConnected));
       }
 
@@ -89,8 +108,31 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
     if (active) void loadSettings();
   }, [active, loadSettings]);
 
+  const isDirty = useMemo(() => {
+    if (!settings) return false;
+    return JSON.stringify(settings) !== savedSnapshot;
+  }, [savedSnapshot, settings]);
+
+  const passwordHints = passwordStrengthHints(passwordForm.newPassword);
+  const passwordReady =
+    passwordForm.currentPassword.length > 0 &&
+    passwordForm.newPassword.length > 0 &&
+    passwordForm.confirmPassword.length > 0 &&
+    passwordHints.length === 0 &&
+    passwordForm.newPassword === passwordForm.confirmPassword;
+
+  const passwordAgeDays = useMemo(() => {
+    if (!profile?.passwordChangedAt && !profile?.createdAt) return null;
+    const base = new Date(profile.passwordChangedAt ?? profile.createdAt).getTime();
+    return Math.floor((Date.now() - base) / (24 * 60 * 60 * 1000));
+  }, [profile]);
+
   async function saveSettings(patch: Partial<AppSettingsRecord>, successMessage: string) {
     if (!settings) return;
+    if (patch.contactEmail && !emailPattern.test(patch.contactEmail)) {
+      pushToast("Email de contact invalide.");
+      return;
+    }
     setSaving(true);
     try {
       const response = await fetch("/api/dashboard/settings", {
@@ -103,7 +145,10 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
         pushToast(data.error ?? "Enregistrement impossible.");
         return;
       }
-      if (data.settings) setSettings(data.settings);
+      if (data.settings) {
+        setSettings(data.settings);
+        setSavedSnapshot(JSON.stringify(data.settings));
+      }
       pushToast(successMessage);
     } catch {
       pushToast("Erreur réseau pendant l'enregistrement.");
@@ -113,6 +158,10 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
   }
 
   async function saveProfile() {
+    if (!emailPattern.test(profileForm.email)) {
+      pushToast("Email administrateur invalide.");
+      return;
+    }
     setSaving(true);
     try {
       const response = await fetch("/api/dashboard/settings/profile", {
@@ -126,7 +175,7 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
         return;
       }
       if (data.profile) {
-        setProfile(data.profile);
+        setProfile((prev) => ({ ...prev, ...data.profile! }));
         setProfileForm({ name: data.profile.name, email: data.profile.email });
       }
       pushToast("Profil administrateur mis à jour.");
@@ -138,6 +187,14 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
   }
 
   async function changePassword() {
+    if (!passwordReady) {
+      pushToast(
+        passwordHints.length > 0
+          ? `Mot de passe trop faible : ${passwordHints.join(", ")}.`
+          : "Vérifiez la confirmation du mot de passe.",
+      );
+      return;
+    }
     setSaving(true);
     try {
       const response = await fetch("/api/dashboard/settings/password", {
@@ -165,6 +222,32 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
     }
   }
 
+  async function testWebhook() {
+    setTestingWebhook(true);
+    try {
+      const response = await fetch("/api/dashboard/settings/webhook-test", {
+        method: "POST",
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+        status?: number;
+        endpoint?: string;
+      };
+      if (!response.ok) {
+        pushToast(data.error ?? "Test webhook échoué.");
+        return;
+      }
+      pushToast(
+        `${data.message ?? "Webhook testé."}${data.status ? ` (HTTP ${data.status})` : ""}`,
+      );
+    } catch {
+      pushToast("Erreur réseau pendant le test webhook.");
+    } finally {
+      setTestingWebhook(false);
+    }
+  }
+
   if (loading && !settings) {
     return (
       <div className={`page${active ? " active" : ""}`} id="page-settings">
@@ -189,8 +272,22 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
     );
   }
 
+  const rotationDue =
+    passwordAgeDays !== null && passwordAgeDays >= settings.passwordRotationDays;
+
   return (
     <div className={`page${active ? " active" : ""}`} id="page-settings">
+      {isDirty ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-body" style={{ padding: "12px 16px" }}>
+            <span className="badge y">Modifications non enregistrées</span>
+            <span style={{ marginLeft: 10, opacity: 0.75 }}>
+              Enregistrez la section active pour appliquer les changements au site.
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       {section === "overview" ? (
         <div className="grid-2">
           <button
@@ -200,7 +297,9 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
           >
             <span className="fin-report-ico">👤</span>
             <span className="fin-report-t">Compte & profil</span>
-            <span className="fin-report-d">{settings.companyName} · {settings.contactEmail}</span>
+            <span className="fin-report-d">
+              {profile?.name ?? settings.companyName} · {profile?.email ?? settings.contactEmail}
+            </span>
           </button>
           <button
             type="button"
@@ -210,7 +309,9 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
             <span className="fin-report-ico">🔐</span>
             <span className="fin-report-t">Sécurité</span>
             <span className="fin-report-d">
-              {settings.twoFactorEnabled ? "2FA activée" : "2FA désactivée"} · rotation {settings.passwordRotationDays} j
+              Session {settings.sessionTimeoutEnabled ? "2 h" : "7 j"} · rotation{" "}
+              {settings.passwordRotationDays} j
+              {rotationDue ? " · rotation due" : ""}
             </span>
           </button>
           <button
@@ -236,12 +337,16 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                 <li>
                   <span>Base MongoDB</span>
                   <span className={`badge ${databaseConnected ? "g" : "r"}`}>
-                    {databaseConnected ? "Connectée" : "Hors ligne"}
+                    {databaseConnected ? "Joignable" : "Hors ligne"}
                   </span>
                 </li>
                 <li>
                   <span>Administrateur</span>
                   <span>{profile?.email ?? "Session legacy"}</span>
+                </li>
+                <li>
+                  <span>Dernière connexion</span>
+                  <span>{formatDate(profile?.lastLoginAt)}</span>
                 </li>
                 <li>
                   <span>Email contact site</span>
@@ -265,7 +370,7 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
             <div className="card-head">
               <div>
                 <div className="card-title">👤 Organisation</div>
-                <div className="card-sub">Coordonnées affichées sur le site et le dashboard</div>
+                <div className="card-sub">Coordonnées affichées sur le site public</div>
               </div>
             </div>
             <div className="card-body">
@@ -293,10 +398,19 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                   />
                 </label>
                 <label className="blog-field">
-                  <span>Téléphone</span>
+                  <span>Téléphone principal</span>
                   <input
                     value={settings.phone}
                     onChange={(e) => setSettings((prev) => prev && { ...prev, phone: e.target.value })}
+                  />
+                </label>
+                <label className="blog-field">
+                  <span>Téléphone secondaire</span>
+                  <input
+                    value={settings.phoneSecondary ?? ""}
+                    onChange={(e) =>
+                      setSettings((prev) => prev && { ...prev, phoneSecondary: e.target.value || null })
+                    }
                   />
                 </label>
                 <label className="blog-field">
@@ -333,11 +447,12 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                         legalName: settings.legalName,
                         contactEmail: settings.contactEmail,
                         phone: settings.phone,
+                        phoneSecondary: settings.phoneSecondary,
                         website: settings.website,
                         city: settings.city,
                         address: settings.address,
                       },
-                      "Informations organisation enregistrées.",
+                      "Informations organisation enregistrées et appliquées au site.",
                     )
                   }
                 >
@@ -352,7 +467,9 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
               <div>
                 <div className="card-title">🛡️ Profil administrateur</div>
                 <div className="card-sub">
-                  {profile ? `Dernière mise à jour · ${formatDate(profile.updatedAt)}` : "Session sans profil DB"}
+                  {profile
+                    ? `Dernière mise à jour · ${formatDate(profile.updatedAt)}`
+                    : "Session sans profil DB"}
                 </div>
               </div>
             </div>
@@ -375,6 +492,11 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                         onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
                       />
                     </label>
+                    <div className="blog-field blog-field-full">
+                      <span className="db-stub-desc">
+                        Dernière connexion : {formatDate(profile.lastLoginAt)}
+                      </span>
+                    </div>
                   </div>
                   <div className="blog-more blog-form-actions settings-account-actions">
                     <button
@@ -389,7 +511,8 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                 </>
               ) : (
                 <p className="db-stub-desc">
-                  Connectez-vous avec un compte administrateur en base (pas le mode legacy) pour modifier le profil.
+                  Connectez-vous avec un compte administrateur en base (pas le mode legacy) pour
+                  modifier le profil.
                 </p>
               )}
             </div>
@@ -408,15 +531,11 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
             </div>
             <div className="card-body">
               <div className="blog-form-grid">
-                <label className="blog-toggle">
-                  <input
-                    type="checkbox"
-                    checked={settings.twoFactorEnabled}
-                    onChange={(e) =>
-                      setSettings((prev) => prev && { ...prev, twoFactorEnabled: e.target.checked })
-                    }
-                  />
-                  <span>Activer la double authentification (2FA)</span>
+                <label className="blog-toggle blog-field-full" style={{ opacity: 0.7 }}>
+                  <input type="checkbox" checked={false} disabled readOnly />
+                  <span>
+                    Double authentification (2FA) — bientôt disponible
+                  </span>
                 </label>
                 <label className="blog-toggle">
                   <input
@@ -426,17 +545,21 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                       setSettings((prev) => prev && { ...prev, loginAlerts: e.target.checked })
                     }
                   />
-                  <span>Recevoir des alertes de connexion</span>
+                  <span>Journaliser les connexions réussies (logs serveur)</span>
                 </label>
                 <label className="blog-toggle blog-field-full">
                   <input
                     type="checkbox"
                     checked={settings.sessionTimeoutEnabled}
                     onChange={(e) =>
-                      setSettings((prev) => prev && { ...prev, sessionTimeoutEnabled: e.target.checked })
+                      setSettings((prev) =>
+                        prev && { ...prev, sessionTimeoutEnabled: e.target.checked },
+                      )
                     }
                   />
-                  <span>Expiration automatique des sessions inactives</span>
+                  <span>
+                    Expiration courte des sessions (2 h). Désactivé = sessions jusqu&apos;à 7 jours.
+                  </span>
                 </label>
                 <label className="blog-field blog-field-full">
                   <span>Rotation mot de passe admin (jours)</span>
@@ -447,7 +570,10 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                         prev
                           ? {
                               ...prev,
-                              passwordRotationDays: Number.parseInt(e.target.value, 10) as 30 | 60 | 90,
+                              passwordRotationDays: Number.parseInt(e.target.value, 10) as
+                                | 30
+                                | 60
+                                | 90,
                             }
                           : prev,
                       )
@@ -458,6 +584,14 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                     <option value="90">Tous les 90 jours</option>
                   </select>
                 </label>
+                {passwordAgeDays !== null ? (
+                  <div className="blog-field blog-field-full">
+                    <span className={`badge ${rotationDue ? "y" : "g"}`}>
+                      Âge du mot de passe : {passwordAgeDays} j
+                      {rotationDue ? " — rotation recommandée" : ""}
+                    </span>
+                  </div>
+                ) : null}
               </div>
               <div className="blog-more blog-form-actions settings-account-actions">
                 <button
@@ -467,7 +601,7 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                   onClick={() =>
                     void saveSettings(
                       {
-                        twoFactorEnabled: settings.twoFactorEnabled,
+                        twoFactorEnabled: false,
                         loginAlerts: settings.loginAlerts,
                         sessionTimeoutEnabled: settings.sessionTimeoutEnabled,
                         passwordRotationDays: settings.passwordRotationDays,
@@ -486,7 +620,9 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
             <div className="card-head">
               <div>
                 <div className="card-title">🔑 Changer le mot de passe</div>
-                <div className="card-sub">Compte administrateur connecté</div>
+                <div className="card-sub">
+                  12 caractères min. · majuscule · minuscule · chiffre · symbole
+                </div>
               </div>
             </div>
             <div className="card-body">
@@ -494,42 +630,78 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                 <div className="blog-form-grid">
                   <label className="blog-field blog-field-full">
                     <span>Mot de passe actuel</span>
-                    <input
-                      type="password"
-                      value={passwordForm.currentPassword}
-                      onChange={(e) =>
-                        setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
-                      }
-                      autoComplete="current-password"
-                    />
+                    <span className="password-input-wrap">
+                      <input
+                        type={showPasswords ? "text" : "password"}
+                        value={passwordForm.currentPassword}
+                        onChange={(e) =>
+                          setPasswordForm((prev) => ({
+                            ...prev,
+                            currentPassword: e.target.value,
+                          }))
+                        }
+                        autoComplete="current-password"
+                      />
+                      <PasswordVisibilityButton
+                        visible={showPasswords}
+                        onToggle={() => setShowPasswords((visible) => !visible)}
+                      />
+                    </span>
                   </label>
                   <label className="blog-field">
                     <span>Nouveau mot de passe</span>
-                    <input
-                      type="password"
-                      value={passwordForm.newPassword}
-                      onChange={(e) =>
-                        setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
-                      }
-                      autoComplete="new-password"
-                    />
+                    <span className="password-input-wrap">
+                      <input
+                        type={showPasswords ? "text" : "password"}
+                        value={passwordForm.newPassword}
+                        onChange={(e) =>
+                          setPasswordForm((prev) => ({
+                            ...prev,
+                            newPassword: e.target.value,
+                          }))
+                        }
+                        autoComplete="new-password"
+                      />
+                      <PasswordVisibilityButton
+                        visible={showPasswords}
+                        onToggle={() => setShowPasswords((visible) => !visible)}
+                      />
+                    </span>
                   </label>
                   <label className="blog-field">
                     <span>Confirmer</span>
-                    <input
-                      type="password"
-                      value={passwordForm.confirmPassword}
-                      onChange={(e) =>
-                        setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
-                      }
-                      autoComplete="new-password"
-                    />
+                    <span className="password-input-wrap">
+                      <input
+                        type={showPasswords ? "text" : "password"}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) =>
+                          setPasswordForm((prev) => ({
+                            ...prev,
+                            confirmPassword: e.target.value,
+                          }))
+                        }
+                        autoComplete="new-password"
+                      />
+                      <PasswordVisibilityButton
+                        visible={showPasswords}
+                        onToggle={() => setShowPasswords((visible) => !visible)}
+                      />
+                    </span>
                   </label>
+                  {passwordForm.newPassword ? (
+                    <div className="blog-field blog-field-full">
+                      <span className={`badge ${passwordHints.length === 0 ? "g" : "y"}`}>
+                        {passwordHints.length === 0
+                          ? "Mot de passe conforme"
+                          : `Manque : ${passwordHints.join(", ")}`}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="blog-more blog-form-actions settings-account-actions blog-field-full">
                     <button
                       type="button"
                       className="btn-hero blog-form-primary"
-                      disabled={saving}
+                      disabled={saving || !passwordReady}
                       onClick={() => void changePassword()}
                     >
                       {saving ? "Mise à jour…" : "Mettre à jour le mot de passe"}
@@ -538,7 +710,8 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                 </div>
               ) : (
                 <p className="db-stub-desc">
-                  Le changement de mot de passe nécessite un compte admin enregistré en base de données.
+                  Le changement de mot de passe nécessite un compte admin enregistré en base de
+                  données.
                 </p>
               )}
             </div>
@@ -551,7 +724,7 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
           <div className="card-head">
             <div>
               <div className="card-title">🔌 Intégrations & webhooks</div>
-              <div className="card-sub">Services connectés au site Noya Industries</div>
+              <div className="card-sub">Services connectés au site {settings.companyName}</div>
             </div>
           </div>
           <div className="card-body">
@@ -561,13 +734,15 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                   type="checkbox"
                   checked={settings.infinitecoreWebhookEnabled}
                   onChange={(e) =>
-                    setSettings((prev) => prev && { ...prev, infinitecoreWebhookEnabled: e.target.checked })
+                    setSettings((prev) =>
+                      prev && { ...prev, infinitecoreWebhookEnabled: e.target.checked },
+                    )
                   }
                 />
                 <span>Activer le webhook Infinite Core (candidatures / partenariats)</span>
               </label>
               <label className="blog-field blog-field-full">
-                <span>URL webhook Infinite Core</span>
+                <span>URL webhook Infinite Core (HTTPS)</span>
                 <input
                   value={settings.infinitecoreWebhookUrl ?? ""}
                   onChange={(e) =>
@@ -605,6 +780,14 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
               >
                 {saving ? "Enregistrement…" : "Enregistrer les intégrations"}
               </button>
+              <button
+                type="button"
+                className="btn-hero blog-form-secondary"
+                disabled={testingWebhook || !settings.infinitecoreWebhookEnabled}
+                onClick={() => void testWebhook()}
+              >
+                {testingWebhook ? "Test…" : "Tester le webhook"}
+              </button>
             </div>
           </div>
           <div className="card-table-wrap">
@@ -639,7 +822,7 @@ export function SettingsPage({ active, section, onSettingsNavigate }: SettingsPa
                   <td className="bold">Formulaire contact</td>
                   <td>{settings.contactEmail}</td>
                   <td>
-                    <span className="badge b">Configuré</span>
+                    <span className="badge g">Branché paramètres</span>
                   </td>
                 </tr>
               </tbody>

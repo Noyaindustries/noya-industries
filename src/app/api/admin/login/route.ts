@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   ADMIN_SESSION_COOKIE,
+  ADMIN_SESSION_TTL_EXTENDED_SECONDS,
   ADMIN_SESSION_TTL_SECONDS,
   buildAdminSessionValue,
   buildLegacyAdminSessionValue,
@@ -16,6 +17,7 @@ import {
   getRateLimitStatus,
   type RateLimitResult,
 } from "@/lib/security/rate-limit";
+import { getAppSettings } from "@/lib/site-settings";
 
 type LoginPayload = {
   email?: string;
@@ -138,12 +140,57 @@ export async function POST(request: Request) {
     );
   }
 
+  const settings = await getAppSettings();
+  const sessionTtlSeconds = settings.sessionTimeoutEnabled
+    ? ADMIN_SESSION_TTL_SECONDS
+    : ADMIN_SESSION_TTL_EXTENDED_SECONDS;
+
+  let passwordRotationRequired = false;
+  if (authenticatedAdminId !== "legacy" && process.env.DATABASE_URL) {
+    try {
+      const admin = await prisma.adminUser.findUnique({
+        where: { id: authenticatedAdminId },
+      });
+      if (admin) {
+        const changedAt =
+          admin.passwordChangedAt instanceof Date
+            ? admin.passwordChangedAt.getTime()
+            : admin.createdAt.getTime();
+        const ageDays = (Date.now() - changedAt) / (24 * 60 * 60 * 1000);
+        passwordRotationRequired = ageDays >= settings.passwordRotationDays;
+
+        await prisma.adminUser.update({
+          where: { id: admin.id },
+          data: {
+            lastLoginAt: new Date(),
+            lastLoginIp: clientIp,
+          },
+        });
+
+        if (settings.loginAlerts) {
+          console.info("[admin/login] successful login", {
+            adminId: admin.id,
+            email: admin.email,
+            ip: clientIp,
+            passwordRotationRequired,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("[admin/login] post-auth update failed", error);
+    }
+  }
+
   let sessionValue: string;
   try {
     sessionValue =
       authenticatedAdminId === "legacy"
         ? await buildLegacyAdminSessionValue(getConfiguredAdminPassword() ?? "")
-        : await buildAdminSessionValue(authenticatedAdminId);
+        : await buildAdminSessionValue(
+            authenticatedAdminId,
+            Date.now(),
+            sessionTtlSeconds,
+          );
   } catch (error) {
     console.error("[admin/login] session secret failed", error);
     return NextResponse.json(
@@ -159,7 +206,7 @@ export async function POST(request: Request) {
   clearRateLimit(identityRateLimitKey);
 
   const response = NextResponse.json(
-    { ok: true },
+    { ok: true, passwordRotationRequired },
     { headers: { "Cache-Control": "no-store" } },
   );
   response.cookies.set({
@@ -169,7 +216,7 @@ export async function POST(request: Request) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
-    maxAge: ADMIN_SESSION_TTL_SECONDS,
+    maxAge: sessionTtlSeconds,
     priority: "high",
   });
   return response;

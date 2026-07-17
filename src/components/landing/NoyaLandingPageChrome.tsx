@@ -4,7 +4,7 @@ import { NoyaLandingFooter } from "./sections/NoyaLandingFooter";
 import { NoyaLandingNav } from "./sections/NoyaLandingNav";
 import { NoyaLandingClient } from "./NoyaLandingClient";
 
-export function NoyaLandingPageChrome({ children }: { children: React.ReactNode }) {
+export async function NoyaLandingPageChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <NoyaLandingBackground />

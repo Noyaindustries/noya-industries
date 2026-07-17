@@ -2,11 +2,13 @@
 
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PasswordVisibilityButton } from "@/components/PasswordVisibilityButton";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submittingRef = useRef(false);
@@ -40,10 +42,20 @@ export default function AdminLoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = (await response.json()) as { error?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        passwordRotationRequired?: boolean;
+      };
       if (!response.ok) {
         setError(data.error ?? "Connexion impossible.");
         return;
+      }
+      if (data.passwordRotationRequired) {
+        try {
+          sessionStorage.setItem("noya_password_rotation_required", "1");
+        } catch {
+          // ignore
+        }
       }
       router.push(nextUrl);
       router.refresh();
@@ -89,14 +101,20 @@ export default function AdminLoginPage() {
           </label>
           <label className="blog-field blog-field-full">
             <span>Mot de passe</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              required
-            />
+            <span className="password-input-wrap">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                required
+              />
+              <PasswordVisibilityButton
+                visible={showPassword}
+                onToggle={() => setShowPassword((visible) => !visible)}
+              />
+            </span>
           </label>
           <button type="submit" className="btn-hero admin-login-submit" disabled={submitting}>
             {submitting ? "Connexion..." : "Se connecter"}

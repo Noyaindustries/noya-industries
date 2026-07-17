@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { NOYA_CONTACT_EMAIL } from "@/lib/contact-email";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { getAppSettings } from "@/lib/site-settings";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,7 +19,7 @@ type ForwardPayload = {
 const MAILTO_MAX_LEN = 1950;
 const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 
-function buildContactMailto(payload: ForwardPayload): string {
+function buildContactMailto(payload: ForwardPayload, contactEmail: string): string {
   const topicLine = payload.topic ? `Sujet : ${payload.topic}\n` : "";
   const companyLine = payload.company ? `Organisation : ${payload.company}\n` : "";
   const phoneLine = payload.phone ? `Téléphone : ${payload.phone}\n` : "";
@@ -29,17 +29,17 @@ function buildContactMailto(payload: ForwardPayload): string {
     ? `[Site Noya] ${payload.topic} — ${payload.name}`
     : `[Site Noya] Contact — ${payload.name}`;
 
-  let href = `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  let href = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   if (href.length > MAILTO_MAX_LEN) {
     const suffix = "\n\n[Message tronqué — renvoyez la suite par un second email si besoin.]";
     let trimmed = body;
     while (
-      `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`.length >
+      `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`.length >
         MAILTO_MAX_LEN && trimmed.length > 200
     ) {
       trimmed = trimmed.slice(0, Math.floor(trimmed.length * 0.85));
     }
-    href = `mailto:${NOYA_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`;
+    href = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(trimmed + suffix)}`;
   }
   return href;
 }
@@ -126,6 +126,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const redirect = buildContactMailto(payload);
+  const settings = await getAppSettings();
+  const redirect = buildContactMailto(payload, settings.contactEmail);
   return NextResponse.json({ ok: true as const, redirect });
 }

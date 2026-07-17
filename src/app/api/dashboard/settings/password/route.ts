@@ -66,7 +66,10 @@ export async function POST(request: Request) {
 
     await prisma.adminUser.update({
       where: { id: adminId },
-      data: { passwordHash: await hashPassword(newPassword) },
+      data: {
+        passwordHash: await hashPassword(newPassword),
+        passwordChangedAt: new Date(),
+      },
     });
 
     const response = NextResponse.json(

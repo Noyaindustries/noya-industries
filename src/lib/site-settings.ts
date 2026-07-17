@@ -8,6 +8,7 @@ export type AppSettingsRecord = {
   legalName: string;
   contactEmail: string;
   phone: string;
+  phoneSecondary: string | null;
   website: string;
   city: string;
   address: string;
@@ -26,6 +27,7 @@ export const DEFAULT_APP_SETTINGS: AppSettingsRecord = {
   legalName: "Noya Industries SARL",
   contactEmail: NOYA_CONTACT_EMAIL,
   phone: "+225 01 03 015 467",
+  phoneSecondary: "+225 05 76 66 60 79",
   website: "https://noyaindustries.com",
   city: "Abidjan",
   address: "Riviera, Abidjan, Côte d'Ivoire",
@@ -37,7 +39,8 @@ export const DEFAULT_APP_SETTINGS: AppSettingsRecord = {
     process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
     "https://www.infinitecore.net/api/webhooks/noya-recrutement",
   infinitecoreWebhookEnabled: true,
-  recruitmentPublicUrl: process.env.NEXT_PUBLIC_NOYA_RECRUTEMENT_URL ?? "/recrutement#travailler-avec-nous",
+  recruitmentPublicUrl:
+    process.env.NEXT_PUBLIC_NOYA_RECRUTEMENT_URL ?? "/recrutement#travailler-avec-nous",
   updatedAt: null,
 };
 
@@ -46,11 +49,17 @@ function normalizeRotationDays(value: number): 30 | 60 | 90 {
   return 90;
 }
 
+export function phoneToTelHref(phone: string): string {
+  const digits = phone.replace(/[^\d+]/g, "");
+  return digits.startsWith("+") ? `tel:${digits}` : `tel:+${digits.replace(/^0+/, "")}`;
+}
+
 export function toAppSettingsRecord(row: {
   companyName: string;
   legalName: string;
   contactEmail: string;
   phone: string;
+  phoneSecondary?: string | null;
   website: string;
   city: string;
   address: string;
@@ -68,6 +77,7 @@ export function toAppSettingsRecord(row: {
     legalName: row.legalName,
     contactEmail: row.contactEmail,
     phone: row.phone,
+    phoneSecondary: row.phoneSecondary ?? DEFAULT_APP_SETTINGS.phoneSecondary,
     website: row.website,
     city: row.city,
     address: row.address,
@@ -96,6 +106,16 @@ export async function getAppSettings(): Promise<AppSettingsRecord> {
   }
 }
 
+export async function pingDatabase(): Promise<boolean> {
+  if (!process.env.DATABASE_URL || !prisma) return false;
+  try {
+    await prisma.adminUser.findFirst({ select: { id: true } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function upsertAppSettings(
   input: Partial<AppSettingsRecord>,
 ): Promise<AppSettingsRecord> {
@@ -120,6 +140,7 @@ export async function upsertAppSettings(
       legalName: merged.legalName,
       contactEmail: merged.contactEmail,
       phone: merged.phone,
+      phoneSecondary: merged.phoneSecondary,
       website: merged.website,
       city: merged.city,
       address: merged.address,
@@ -136,6 +157,7 @@ export async function upsertAppSettings(
       legalName: merged.legalName,
       contactEmail: merged.contactEmail,
       phone: merged.phone,
+      phoneSecondary: merged.phoneSecondary,
       website: merged.website,
       city: merged.city,
       address: merged.address,

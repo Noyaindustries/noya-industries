@@ -1,5 +1,6 @@
 export const ADMIN_SESSION_COOKIE = "noya_admin_session";
 export const ADMIN_SESSION_TTL_SECONDS = 2 * 60 * 60;
+export const ADMIN_SESSION_TTL_EXTENDED_SECONDS = 7 * 24 * 60 * 60;
 const SESSION_VERSION = "v2";
 const PBKDF2_ITERATIONS = 600_000;
 const PBKDF2_KEY_LENGTH = 32;
@@ -151,6 +152,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
 export async function buildAdminSessionValue(
   adminId: string,
   nowMs = Date.now(),
+  ttlSeconds = ADMIN_SESSION_TTL_SECONDS,
 ): Promise<string> {
   const secret = getAdminSessionSecret();
   if (!secret) {
@@ -159,7 +161,11 @@ export async function buildAdminSessionValue(
     );
   }
 
-  const expiresAt = Math.floor(nowMs / 1000) + ADMIN_SESSION_TTL_SECONDS;
+  const safeTtl = Math.min(
+    Math.max(60, ttlSeconds),
+    ADMIN_SESSION_TTL_EXTENDED_SECONDS,
+  );
+  const expiresAt = Math.floor(nowMs / 1000) + safeTtl;
   const nonce = new Uint8Array(16);
   crypto.getRandomValues(nonce);
   const payload = `${SESSION_VERSION}.${adminId}.${expiresAt}.${bufferToHex(nonce)}`;
@@ -205,7 +211,7 @@ export async function verifyAdminSessionValue(
   if (
     parsed.expiresAt < nowSeconds - SESSION_CLOCK_SKEW_SECONDS ||
     parsed.expiresAt >
-      nowSeconds + ADMIN_SESSION_TTL_SECONDS + SESSION_CLOCK_SKEW_SECONDS
+      nowSeconds + ADMIN_SESSION_TTL_EXTENDED_SECONDS + SESSION_CLOCK_SKEW_SECONDS
   ) {
     return null;
   }

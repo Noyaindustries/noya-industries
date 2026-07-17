@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { getAppSettings } from "@/lib/site-settings";
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -76,10 +77,7 @@ function logPartnershipDebug(message: string, details?: Record<string, unknown>)
   console.info(`${prefix} ${message}`);
 }
 
-function getValidatedWebhookEndpoint(): string {
-  const configuredEndpoint =
-    process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ??
-    DEFAULT_INFINITECORE_WEBHOOK_URL;
+function getValidatedWebhookEndpoint(configuredEndpoint: string): string {
   const endpoint = new URL(configuredEndpoint);
   const allowedHosts = new Set(
     (process.env.NOYA_ALLOWED_WEBHOOK_HOSTS ?? "www.infinitecore.net")
@@ -99,8 +97,23 @@ function getValidatedWebhookEndpoint(): string {
   return endpoint.toString();
 }
 
+async function resolveWebhookEndpoint(): Promise<string | null> {
+  const settings = await getAppSettings();
+  if (!settings.infinitecoreWebhookEnabled) return null;
+
+  const configuredEndpoint =
+    settings.infinitecoreWebhookUrl?.trim() ||
+    process.env.INFINITECORE_RECRUTEMENT_WEBHOOK_URL ||
+    DEFAULT_INFINITECORE_WEBHOOK_URL;
+
+  return getValidatedWebhookEndpoint(configuredEndpoint);
+}
+
 async function postToInfiniteCore(payload: ForwardPayload): Promise<Response> {
-  const endpoint = getValidatedWebhookEndpoint();
+  const endpoint = await resolveWebhookEndpoint();
+  if (!endpoint) {
+    throw new Error("Webhook Infinite Core désactivé dans les paramètres.");
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -264,6 +277,17 @@ export async function POST(request: Request) {
   };
 
   try {
+    const settings = await getAppSettings();
+    if (!settings.infinitecoreWebhookEnabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Les candidatures partenaires sont temporairement désactivées. Réessayez plus tard ou contactez Noya Industries.",
+        },
+        { status: 503 },
+      );
+    }
+
     const webhookSecret = process.env.NOYA_RECRUTEMENT_WEBHOOK_SECRET?.trim() ?? "";
 
     if (webhookSecret.length === 0) {

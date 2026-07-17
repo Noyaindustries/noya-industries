@@ -17,7 +17,15 @@ export async function getAuthenticatedAdmin() {
   try {
     return await prisma.adminUser.findUnique({
       where: { id: adminId },
-      select: { id: true, email: true, name: true, updatedAt: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        updatedAt: true,
+        createdAt: true,
+        lastLoginAt: true,
+        passwordChangedAt: true,
+      },
     });
   } catch {
     return null;

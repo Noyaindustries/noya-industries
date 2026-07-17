@@ -305,6 +305,16 @@ export function NoyaDashboard() {
           SETTINGS_NAV.map((x) => x.id),
         ),
       );
+
+      try {
+        if (sessionStorage.getItem("noya_password_rotation_required") === "1") {
+          sessionStorage.removeItem("noya_password_rotation_required");
+          setPage("settings");
+          setSettingsSection("security");
+        }
+      } catch {
+        // ignore
+      }
     });
   }, []);
 

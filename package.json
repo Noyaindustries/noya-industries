@@ -19,6 +19,7 @@
     "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@next/env": "^16.2.10",
     "@prisma/client": "^6.19.3",
     "@vercel/blob": "^2.6.1",
     "next": "^16.2.10",

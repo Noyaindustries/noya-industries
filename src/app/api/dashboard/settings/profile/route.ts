@@ -41,6 +41,8 @@ export async function GET() {
       email: admin.email,
       createdAt: admin.createdAt.toISOString(),
       updatedAt: admin.updatedAt.toISOString(),
+      lastLoginAt: admin.lastLoginAt?.toISOString() ?? null,
+      passwordChangedAt: admin.passwordChangedAt?.toISOString() ?? null,
     },
   });
 }

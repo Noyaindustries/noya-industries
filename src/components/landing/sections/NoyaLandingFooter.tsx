@@ -1,11 +1,16 @@
 import { LANDING_IMG } from "../landingAssets";
-export function NoyaLandingFooter() {
+import { getAppSettings, phoneToTelHref } from "@/lib/site-settings";
+
+export async function NoyaLandingFooter() {
+  const settings = await getAppSettings();
+  const secondary = settings.phoneSecondary?.trim();
+
   return (
     <>
       <footer>
         <div className="ft-grid">
           <div>
-            <div className="ft-brand-logo"><img src={LANDING_IMG.brandMark} alt="Noya Industries" /></div>
+            <div className="ft-brand-logo"><img src={LANDING_IMG.brandMark} alt={settings.companyName} /></div>
             <div className="ft-brand">
               <p>Groupe africain d&apos;innovation fondé à Abidjan en 2021. Consulting, Tech, Academy et Startup Studio pour les entreprises et institutions d&apos;Afrique francophone.</p>
             </div>
@@ -30,16 +35,26 @@ export function NoyaLandingFooter() {
           </div>
           <div className="ft-col"><h5>Pôles</h5><ul><li><a href="/poles">Consulting</a></li><li><a href="/poles">Tech &amp; SaaS</a></li><li><a href="/poles">Academy</a></li><li><a href="/poles">Startup Studio</a></li></ul></div>
           <div className="ft-col"><h5>Produits</h5><ul><li><a href="https://padde-ci.com/" target="_blank" rel="noopener noreferrer">PADDE-CI ↗</a></li><li><a href="https://www.infinitecore.net/" target="_blank" rel="noopener noreferrer">Infinite Core ↗</a></li><li><a href="/presenz">PRESENZ ↗</a></li><li><a href="#">NYImmobilier — Bientôt</a></li></ul></div>
-          <div className="ft-col"><h5>Groupe</h5><ul><li><a href="/histoire">Notre histoire</a></li><li><a href="/equipe">L'équipe</a></li><li><a href="/expertise">Expertise</a></li><li><a href="/contact">Contact</a></li></ul></div>
-          <div className="ft-col"><h5>Contact</h5><ul><li><a href="tel:+2250103015467">+225 01 03 015 467</a></li><li><a href="tel:+2250576666079">05 76 66 60 79</a></li><li><a href="mailto:services@noyaindustries.com">services@noyaindustries.com</a></li><li><a href="#">WhatsApp</a></li><li><a href="#">Abidjan, Riviera, CI</a></li></ul></div>
+          <div className="ft-col"><h5>Groupe</h5><ul><li><a href="/histoire">Notre histoire</a></li><li><a href="/equipe">L&apos;équipe</a></li><li><a href="/expertise">Expertise</a></li><li><a href="/contact">Contact</a></li></ul></div>
+          <div className="ft-col">
+            <h5>Contact</h5>
+            <ul>
+              <li><a href={phoneToTelHref(settings.phone)}>{settings.phone}</a></li>
+              {secondary ? (
+                <li><a href={phoneToTelHref(secondary)}>{secondary}</a></li>
+              ) : null}
+              <li><a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a></li>
+              <li><a href="#">WhatsApp</a></li>
+              <li><a href="#">{settings.city}, {settings.address.includes("Riviera") ? "Riviera" : settings.address}, CI</a></li>
+            </ul>
+          </div>
         </div>
         <div className="ft-bottom">
-          <span className="ft-copy">© 2026 Noya Industries · Abidjan, Côte d'Ivoire · Tous droits réservés</span>
-          <span className="ft-tagline">Bâtir l'Afrique de demain.</span>
+          <span className="ft-copy">© 2026 {settings.companyName} · {settings.city}, Côte d&apos;Ivoire · Tous droits réservés</span>
+          <span className="ft-tagline">Bâtir l&apos;Afrique de demain.</span>
           <div className="ft-legal"><a href="#">Mentions légales</a><a href="#">Confidentialité</a></div>
         </div>
       </footer>
-
     </>
   );
 }
