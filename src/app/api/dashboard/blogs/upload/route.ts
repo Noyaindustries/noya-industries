@@ -22,12 +22,6 @@ function getExtensionFromMimeType(mimeType: string): string {
 }
 
 export async function POST(request: Request) {
-  if (!process.env.DATABASE_URL) {
-    return NextResponse.json(
-      { error: "DATABASE_URL est requis pour modifier les articles." },
-      { status: 503 },
-    );
-  }
   const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
   const hasOidcStoreCredentials = Boolean(
     process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID,

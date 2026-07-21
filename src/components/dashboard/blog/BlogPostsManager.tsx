@@ -176,6 +176,12 @@ export function BlogPostsManager() {
       const formData = new FormData();
       formData.append("file", file);
       const response = await fetch("/api/dashboard/blogs/upload", { method: "POST", body: formData });
+      if (response.status === 401) {
+        window.location.assign(
+          `/admin-login?next=${encodeURIComponent(window.location.pathname)}`,
+        );
+        return;
+      }
       const data = (await response.json()) as { error?: string; url?: string };
       if (!response.ok || !data.url) {
         setMessage({ type: "error", text: data.error ?? "Upload image impossible." });
