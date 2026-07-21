@@ -1,5 +1,9 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
+import {
+  getVercelBlobCredentials,
+  hasVercelBlobCredentials,
+} from "@/lib/vercel-blob";
 
 export const runtime = "nodejs";
 
@@ -22,11 +26,8 @@ function getExtensionFromMimeType(mimeType: string): string {
 }
 
 export async function POST(request: Request) {
-  const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-  const hasOidcStoreCredentials = Boolean(
-    process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID,
-  );
-  if (!hasBlobToken && !hasOidcStoreCredentials) {
+  const credentials = getVercelBlobCredentials();
+  if (!hasVercelBlobCredentials(credentials)) {
     return NextResponse.json(
       {
         error:
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
         addRandomSuffix: true,
         contentType: uploadedFile.type,
         cacheControlMaxAge: 31_536_000,
+        ...credentials,
       },
     );
 

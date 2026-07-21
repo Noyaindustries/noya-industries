@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { FALLBACK_BLOG_POSTS } from "@/lib/blog-posts";
+import { getVercelBlobCredentials } from "@/lib/vercel-blob";
 
 type BlogPayload = {
   slug: string;
@@ -45,7 +46,7 @@ async function deleteReplacedBlob(
 ): Promise<void> {
   if (!isVercelBlobUrl(previousUrl) || previousUrl === nextUrl) return;
   try {
-    await del(previousUrl);
+    await del(previousUrl, getVercelBlobCredentials());
   } catch (error) {
     console.error("[api/dashboard/blogs] Unable to delete replaced Blob image.", error);
   }
